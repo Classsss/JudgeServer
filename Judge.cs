@@ -135,6 +135,9 @@ namespace JudgeServer {
                             try {
                                 // 실행
                                 mainMethod.Invoke(null, new object[] { });
+
+                                // 실행 결과를 변수에 저장
+                                output = sw.ToString();
                             } 
                             // 런타임 에러가 발생해 프로그램 실행 중지
                             catch (TargetInvocationException ex) {
@@ -145,9 +148,11 @@ namespace JudgeServer {
                                 result.Message = "Runtime Error: " + innerException.Message;
                                 break;
                             }
-
-                            // 실행 결과를 변수에 저장
-                            output = sw.ToString();
+                            finally {
+                                // 표준 입력 및 출력 복원
+                                Console.SetIn(originalIn);
+                                Console.SetOut(originalOut);
+                            }
 
                             // 스톱워치를 멈춰 걸린 시간으로 실행 시간 측정
                             watch.Stop();
@@ -162,10 +167,6 @@ namespace JudgeServer {
                             memoryUsage = memoryUsageAfter - memoryUsageBefore;
                             avgMemoryUsage += memoryUsage;
                         }
-
-                        // 표준 입력 및 출력 복원
-                        Console.SetIn(originalIn);
-                        Console.SetOut(originalOut);
 
                         Console.WriteLine($"Execution Time: {executionTime} ms Memory Used: {memoryUsage} byte");
 
