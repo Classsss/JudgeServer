@@ -24,8 +24,7 @@ namespace JudgeServer.Controllers {
         // 비동기로 채점을 수행함
         private JudgeResult JudgeAsync(JudgeRequest request) {
             // 채점 DB에서 추가적인 정보 받아와서 가공하고 사용하는 작업 필요
-            // 임의로 c언어로 설정
-            return Judge.JudgeHandler["c"](request);
+            return Judge.JudgeHandler[request.Language](request);
         }
     }
 }
