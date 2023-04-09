@@ -16,27 +16,27 @@ namespace JudgeServer {
         // Judge 클래스에서 유일하게 접근할 수 있는 Judge 함수 Handler
         // 이 Dictionary 객체를 언어 문자열로 인덱싱하여 JudgeRequest 객체를 인자로 전달하여 사용
         // Ex) JudgeResult result = JudgeHandler["c"](request); == JudgeC(request)
-        public static Dictionary<string, Func<JudgeRequest, JudgeResult>> JudgeHandler;
+        public static Dictionary<string, Func<JudgeRequest, Task<JudgeResult>>> JudgeHandler;
 
         // static class의 생성자
         static Judge() {
             // Judge 함수 Handler를 초기화
-            JudgeHandler = new Dictionary<string, Func<JudgeRequest, JudgeResult>>() {
-                { C, JudgeC }, { CPP, JudgeCpp }, { CSHARP, JudgeCSharp }, { JAVA, JudgeJava }, { PYTHON, JudgePython },};
+            JudgeHandler = new Dictionary<string, Func<JudgeRequest, Task<JudgeResult>>>() {
+                { C, JudgeCAsync }, { CPP, JudgeCppAsync }, { CSHARP, JudgeCSharpAsync }, { JAVA, JudgeJavaAsync }, { PYTHON, JudgePythonAsync } };
         }
 
         // C 코드 채점
-        private static JudgeResult JudgeC(JudgeRequest request) {
+        private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
         }
 
         // C++ 코드 채점
-        private static JudgeResult JudgeCpp(JudgeRequest request) {
+        private static async Task<JudgeResult> JudgeCppAsync(JudgeRequest request) {
             return new JudgeResult();
         }
 
         // C# 코드 채점
-        private static JudgeResult JudgeCSharp(JudgeRequest request) {
+        private static async Task<JudgeResult> JudgeCSharpAsync(JudgeRequest request) {
             // 반환할 객체
             JudgeResult result = new JudgeResult();
 
@@ -226,12 +226,12 @@ namespace JudgeServer {
         }
 
         // Java 코드 채점
-        private static JudgeResult JudgeJava(JudgeRequest request) {
+        private static async Task<JudgeResult> JudgeJavaAsync(JudgeRequest request) {
             return new JudgeResult();
         }
 
         // Python 코드 채점
-        private static JudgeResult JudgePython(JudgeRequest request) {
+        private static async Task<JudgeResult> JudgePythonAsync(JudgeRequest request) {
             return new JudgeResult();
         }
     }
