@@ -53,6 +53,46 @@ namespace JudgeServer {
             memoryUsageLimit = 512;
         }
 
+        /// <summary>
+        /// 채점 제출 폴더를 생성하고 그 안에서 사용할 파일들의 경로를 초기화
+        /// </summary>
+        /// <param name="language">코드의 언어</param>
+        /// <param name="folderName">채점 제출 폴더명/param>
+        /// <param name="folderPath">채점 제출 폴더의 경로</param>
+        /// <param name="inputFilePath">입력 케이스가 저장되는 경로</param>
+        /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
+        /// <param name="runtimeErrorFilePath">런타임 에러 메시지가 저장되는 경로</param>
+        /// <param name="resultFilePath">결과가 저장되는 경로</param>
+        /// <param name="statFilePath">실행 시간과 메모리 사용량이 저장되는 경로</param>
+        private static void CreateSubmitFolder(in string language, out string folderName, out string folderPath, out string inputFilePath, out string compileErrorFilePath, out string runtimeErrorFilePath, out string resultFilePath, out string statFilePath) {
+            // 128비트 크기의 유니크한 GUID로 폴더명 생성
+            folderName = Guid.NewGuid().ToString();
+
+            // 채점 제출 폴더 생성
+            folderPath = Path.Combine(SUBMIT_FOLDER_PATH, language, folderName);
+
+            // 폴더가 존재하지 않는 경우에만 폴더를 생성합니다.
+            if (!Directory.Exists(folderPath)) {
+                Directory.CreateDirectory(folderPath);
+                Console.WriteLine($"폴더가 생성되었습니다: {folderPath}");
+            }
+
+            // 입력 케이스가 저장되는 경로
+            inputFilePath = Path.Combine(folderPath, "input.txt");
+
+            // 컴파일 에러 메시지의 경로
+            compileErrorFilePath = Path.Combine(folderPath, "compileError.txt");
+
+            // 런타임 에러 메시지의 경로
+            runtimeErrorFilePath = Path.Combine(folderPath, "runtimeError.txt");
+
+            // 결과가 저장되는 경로
+            resultFilePath = Path.Combine(folderPath, "result.txt");
+
+            // 실행 시간과 메모리 사용량이 저장되는 경로
+            statFilePath = Path.Combine(folderPath, "stat.txt");
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
