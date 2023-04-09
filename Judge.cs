@@ -319,6 +319,17 @@ namespace JudgeServer {
             }
         }
 
+        /// <summary>
+        /// 채점 제출 폴더를 삭제
+        /// </summary>
+        /// <param name="folderPath">채점 제출 폴더 경로</param>
+        private static void DeleteSubmitFolder(in string folderPath) {
+            // 채점 제출 폴더를 내부 파일까지 전부 삭제한다.
+            if (Directory.Exists(folderPath)) {
+                Directory.Delete(folderPath, true);
+            }
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
