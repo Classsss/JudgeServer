@@ -240,6 +240,25 @@ namespace JudgeServer {
             memoryUsage = 0;
         }
 
+        /// <summary>
+        /// 시간 초과가 발생했는지 체크
+        /// </summary>
+        /// <param name="executionTime">실행 시간</param>
+        /// <param name="executionTimeLimit">실행 시간 제한</param>
+        /// <param name="result">채점 결과를 저장하는 객체</param>
+        /// <returns>시간 초과가 발생했으면 true</returns>
+        private static bool IsExceededTimeLimit(in double executionTime, in double executionTimeLimit, ref JudgeResult result) {
+            // 시간 초과
+            if (executionTime > executionTimeLimit) {
+                Console.WriteLine($"[시간 초과] 실행시간:{executionTime} / 제한:{executionTimeLimit}");
+
+                result.Result = JudgeResult.JResult.TimeLimitExceeded;
+                return true;
+            }
+
+            return false;
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
