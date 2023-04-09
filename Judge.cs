@@ -133,6 +133,37 @@ namespace JudgeServer {
             return (dockerClient, volumeMapping);
         }
 
+        /// <summary>
+        /// 빌드한 이미지로 컨테이너 생성, 실행, 제거를 수행하는 비동기 메소드
+        /// </summary>
+        /// <param name="dockerClient">도커 클라이언트</param>
+        /// <param name="volumeMapping">컨테이너와의 볼륨 매핑</param>
+        /// <param name="imageTag">도커 이미지 태그</param>
+        /// <param name="folderName">채점 제출 폴더명</param>
+        /// <returns>비동기 작업 Task 반환</returns>
+        private static async Task RunDockerContainerAsync(DockerClient? dockerClient, Dictionary<string, string>? volumeMapping, string imageTag, string folderName) {
+            // 컨테이너 생성
+            CreateContainerResponse? createContainerResponse = await dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters {
+                Image = $"{IMAGE_NAME}:{imageTag}",
+                // 환경 변수 설정
+                Env = new List<string> { "DIR_NAME=" + folderName },
+                // 볼륨 설정
+                HostConfig = new HostConfig {
+                    Binds = volumeMapping.Select(kv => $"{kv.Key}:{kv.Value}").ToList(),
+                }
+            });
+
+            // 컨테이너 실행
+            await dockerClient.Containers.StartContainerAsync(createContainerResponse.ID, new ContainerStartParameters());
+
+            // 컨테이너 실행이 끝날때까지 대기
+            await dockerClient.Containers.WaitContainerAsync(createContainerResponse.ID);
+
+            // 컨테이너 종료 및 삭제
+            await dockerClient.Containers.StopContainerAsync(createContainerResponse.ID, new ContainerStopParameters());
+            await dockerClient.Containers.RemoveContainerAsync(createContainerResponse.ID, new ContainerRemoveParameters());
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
