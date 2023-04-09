@@ -187,6 +187,29 @@ namespace JudgeServer {
             return false;
         }
 
+        /// <summary>
+        /// 런타임 에러가 발생했는지 체크
+        /// </summary>
+        /// <param name="runtimeErrorFilePath">런타임 에러 메시지가 저장되는 경로</param>
+        /// <param name="result">채점 결과를 저장하는 객체</param>
+        /// <returns>런타임 에러가 발생할 때 true</returns>
+        private static bool IsOccuredRuntimeError(in string runtimeErrorFilePath, ref JudgeResult result) {
+            // 런타임 에러가 발생했는지 체크
+            if (File.Exists(runtimeErrorFilePath)) {
+                string errorMsg = File.ReadAllText(runtimeErrorFilePath);
+
+                if (errorMsg.Length != 0) {
+                    Console.WriteLine("Runtime Error Occured : ", errorMsg);
+
+                    result.Result = JudgeResult.JResult.RuntimeError;
+                    result.Message = errorMsg;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
