@@ -330,6 +330,37 @@ namespace JudgeServer {
             }
         }
 
+        /// <summary>
+        /// 채점 결과에 맞게 JudgeResult 객체의 데이터를 채워 반환
+        /// </summary>
+        /// <param name="caseCount">테스트 케이스의 개수</param>
+        /// <param name="result">채점 결과가 저장되는</param>
+        /// <param name="avgExecutionTime">테스트 케이스 평균 실행 시간</param>
+        /// <param name="avgMemoryUsage">테스트 케이스 평균 메모리 사용량</param>
+        /// <returns>채점 결과에 맞게 데이터가 채워진 JudgeResult 객체</returns>
+        private static JudgeResult GetJudgeResult(in int caseCount, ref JudgeResult result, ref double avgExecutionTime, ref long avgMemoryUsage) {
+            // 테스트 케이스를 통과하지 못함
+            if (result.Result != JudgeResult.JResult.Accepted) {
+                return result;
+            }
+
+            // 모든 테스트 케이스를 통과
+
+            // 평균 실행 시간, 메모리 사용량 계산
+            avgExecutionTime /= caseCount;
+            avgMemoryUsage /= caseCount;
+
+            // 실행 시간, 메모리 사용량 데이터 저장
+            result.ExecutionTime = avgExecutionTime;
+            result.MemoryUsage = avgMemoryUsage;
+
+            Console.WriteLine("모든 케이스 통과");
+            Console.WriteLine("avgExecutionTime : " + avgExecutionTime);
+            Console.WriteLine("avgMemoryUsage : " + avgMemoryUsage);
+
+            return result;
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
