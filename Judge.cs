@@ -210,6 +210,36 @@ namespace JudgeServer {
             return false;
         }
 
+        /// <summary>
+        /// 실행 시간, 메모리 사용량을 측정
+        /// </summary>
+        /// <param name="statFilePath">실행 시간, 메모리 사용량이 저장되는 경로</param>
+        /// <param name="executionTime">실행 시간</param>
+        /// <param name="memoryUsage">메모리 사용량</param>
+        private static void GetStats(in string statFilePath, out double executionTime, out long memoryUsage) {
+            // 실행 시간, 메모리 사용량이 측정됐는지 체크
+            if (File.Exists(statFilePath)) {
+                string[] statLines = File.ReadAllLines(statFilePath);
+
+                // 올바르게 측정됐으면 실행 시간, 메모리 사용량만 2줄로 저장됨
+                if (statLines.Length == 2) {
+                    // 문자열을 숫자로 변환하여 사용
+                    executionTime = double.Parse(statLines[0].Trim());
+                    // TODO : 메모리 사용량 측정 구현
+                    //memoryUsage = long.Parse(statLines[1].Trim());
+                    memoryUsage = 0;
+
+                    Console.WriteLine($"실행시간:{executionTime} 메모리 사용량:{memoryUsage}");
+
+                    return;
+                }
+            }
+
+            // 유효한 측정 값이 없을 때
+            executionTime = 0;
+            memoryUsage = 0;
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
