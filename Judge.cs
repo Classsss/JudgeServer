@@ -302,6 +302,23 @@ namespace JudgeServer {
             return true;
         }
 
+        /// <summary>
+        /// 사용이 끝난 입력 케이스 파일과 결과 파일을 초기화
+        /// </summary>
+        /// <param name="inputFilePath">입력 케이스가 저장되는 경로</param>
+        /// <param name="resultFilePath">결과가 저장되는 경로</param>
+        private static void InitFile(in string inputFilePath, in string resultFilePath) {
+            // 입력 파일 초기화
+            if (File.Exists(inputFilePath)) {
+                File.WriteAllText(inputFilePath, string.Empty);
+            }
+
+            // 결과 파일 초기화
+            if (File.Exists(resultFilePath)) {
+                File.WriteAllText(resultFilePath, string.Empty);
+            }
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
