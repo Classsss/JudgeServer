@@ -259,6 +259,25 @@ namespace JudgeServer {
             return false;
         }
 
+        /// <summary>
+        /// 메모리 초과가 발생했는지 체크
+        /// </summary>
+        /// <param name="memoryUsage">메모리 사용량</param>
+        /// <param name="memoryUsageLimit">메모리 사용량 제한</param>
+        /// <param name="result">채점 결과를 저장하는 객체</param>
+        /// <returns>메모리 초과가 발생할 때 true</returns>
+        private static bool IsExceededMemoryLimit(in long memoryUsage, in long memoryUsageLimit, ref JudgeResult result) {
+            // 메모리 초과
+            if (memoryUsage > memoryUsageLimit) {
+                Console.WriteLine($"[메모리 초과] 메모리 사용량:{memoryUsage} / 제한:{memoryUsageLimit}");
+
+                result.Result = JudgeResult.JResult.MemoryLimitExceeded;
+                return true;
+            }
+
+            return false;
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
