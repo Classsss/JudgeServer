@@ -110,6 +110,29 @@ namespace JudgeServer {
             File.WriteAllText(codeFilePath, code);
         }
 
+        /// <summary>
+        /// DockerClient를 생성하고 이미지를 빌드하여 컨테이너 생성을 준비하는 비동기 메소드
+        /// </summary>
+        /// <param name="imageTag">도커 이미지 태그</param>
+        /// <param name="folderPath">채점 제출 폴더 경로</param>
+        /// <param name="folderName">채점 제출 폴더 명</param>
+        /// <returns>생성된 DockerClient와 volumeMapping을 ValueTuple로 반환</returns>
+        private static async Task<ValueTuple<DockerClient?, Dictionary<string, string>?>> InitDockerClientAsync(string imageTag, string folderPath, string folderName) {
+            // Docker client 생성
+            DockerClient? dockerClient = new DockerClientConfiguration(new Uri("npipe://./pipe/docker_engine")).CreateClient();
+
+            // 이미지 다운로드
+            await dockerClient.Images.CreateImageAsync(new ImagesCreateParameters {
+                FromImage = IMAGE_NAME, Tag = imageTag
+            }, new AuthConfig(), new Progress<JSONMessage>());
+
+            // 볼륨 맵핑 - 로컬 유저 폴더 : 컨테이너 내부 유저 폴더
+            Dictionary<string, string>? volumeMapping = new Dictionary<string, string> { { folderPath, $"/app/{folderName}" } };
+
+            // ValueTuple로 반환
+            return (dockerClient, volumeMapping);
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
