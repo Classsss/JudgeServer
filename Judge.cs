@@ -13,6 +13,12 @@ namespace JudgeServer {
         private const string JAVA = "java";
         private const string PYTHON = "python";
 
+        // 채점 폴더가 생성될 기본 경로
+        private const string SUBMIT_FOLDER_PATH = @"C:\Users\LeeHaYoon\Desktop\docker\";
+
+        // 도커 이미지 이름
+        private const string IMAGE_NAME = "leehayoon/judge";
+
         // Judge 클래스에서 유일하게 접근할 수 있는 Judge 함수 Handler
         // 이 Dictionary 객체를 언어 문자열로 인덱싱하여 JudgeRequest 객체를 인자로 전달하여 사용
         // Ex) JudgeResult result = JudgeHandler["c"](request); == JudgeC(request)
