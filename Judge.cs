@@ -93,6 +93,23 @@ namespace JudgeServer {
             statFilePath = Path.Combine(folderPath, "stat.txt");
         }
 
+        /// <summary>
+        /// 전달받은 코드를 언어에 맞는 파일로 생성
+        /// </summary>
+        /// <param name="folderPath">채점 제출 폴더 경로</param>
+        /// <param name="code">코드</param>
+        /// <param name="language">코드의 언어</param>
+        /// <param name="codeFilePath">코드 파일의 경로</param>
+        private static void CreateCodeFile(in string folderPath, in string code, in string language, out string codeFilePath) {
+            // 파이썬의 경우 언어 이름과 파일 형식이 다름
+            if (language == "python") {
+                codeFilePath = Path.Combine(folderPath, "Main.py");
+            } else {
+                codeFilePath = Path.Combine(folderPath, $"Main.{language}");
+            }
+            File.WriteAllText(codeFilePath, code);
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
