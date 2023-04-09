@@ -278,6 +278,30 @@ namespace JudgeServer {
             return false;
         }
 
+        /// <summary>
+        /// 테스트 케이스를 수행한 실행 결과와 정답을 비교
+        /// </summary>
+        /// <param name="outputCase">출력 테스트 케이스</param>
+        /// <param name="resultFilePath">결과가 저장되는 경로</param>
+        /// <param name="result">채점 결과가 저장되는 객체</param>
+        /// <returns>테스트 케이스를 통과했을 때 true</returns>
+        private static bool JudgeTestCase(in string outputCase, in string resultFilePath, ref JudgeResult result) {
+            // 출력 케이스와 결과 비교
+            string expectedOutput = outputCase;
+            string actualOutput = File.Exists(resultFilePath) ? File.ReadAllText(resultFilePath) : "";
+            Console.WriteLine($"expected : {expectedOutput} / actual : {actualOutput}");
+
+            // 틀림
+            if (expectedOutput != actualOutput) {
+                result.Result = JudgeResult.JResult.WrongAnswer;
+                return false;
+            }
+
+            // 맞음
+            result.Result = JudgeResult.JResult.Accepted;
+            return true;
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
