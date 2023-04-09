@@ -164,6 +164,29 @@ namespace JudgeServer {
             await dockerClient.Containers.RemoveContainerAsync(createContainerResponse.ID, new ContainerRemoveParameters());
         }
 
+        /// <summary>
+        /// 컴파일 에러가 발생했는지 체크
+        /// </summary>
+        /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
+        /// <param name="result">채점 결과를 저장하는 객체</param>
+        /// <returns>컴파일 에러가 발생할 때 true</returns>
+        private static bool IsOccuredCompileError(in string compileErrorFilePath, ref JudgeResult result) {
+            // 컴파일 에러 발생
+            if (File.Exists(compileErrorFilePath)) {
+                string errorMsg = File.ReadAllText(compileErrorFilePath);
+
+                if (errorMsg.Length != 0) {
+                    Console.WriteLine("Compile Error Occured : ", errorMsg);
+
+                    result.Result = JudgeResult.JResult.CompileError;
+                    result.Message = errorMsg;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
             return new JudgeResult();
