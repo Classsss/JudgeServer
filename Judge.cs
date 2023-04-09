@@ -2,6 +2,8 @@
 using Microsoft.CodeAnalysis;
 using System.Diagnostics;
 using System.Reflection;
+using Docker.DotNet;
+using Docker.DotNet.Models;
 
 namespace JudgeServer {
     public class Judge {
