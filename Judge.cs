@@ -363,7 +363,24 @@ namespace JudgeServer {
 
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
-            return new JudgeResult();
+            // 반환할 채점 정보를 저장하는 객체
+            JudgeResult result = new JudgeResult();
+            // c언어 코드
+            string? code = request.Code;
+            // 코드의 언어
+            // TODO : JudgeRequest에서 Language 속성 제거?
+            string? language = request.Language;
+
+            // 입력 테스트 케이스
+            List<string> inputCases;
+            // 출력 테스트 케이스
+            List<string> outputCases;
+            // 실행 시간(ms) 제한
+            double executionTimeLimit;
+            // 메모리 사용량(KB) 제한
+            long memoryUsageLimit;
+            // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
+            GetTestCases(out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
         }
 
         // C++ 코드 채점
