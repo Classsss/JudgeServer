@@ -470,7 +470,8 @@ namespace JudgeServer {
             // TODO : 현재는 디버깅을 위해 주석처리
             //DeleteSubmitFolder(in folderPath);
 
-            return result;
+            // 모든 테스트 케이스를 수행하면 결과를 저장해 JudgeResult 객체 반환
+            return GetJudgeResult(in caseCount, ref result, ref avgExecutionTime, ref avgMemoryUsage);
         }
 
         // C++ 코드 채점
