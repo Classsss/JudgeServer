@@ -363,7 +363,115 @@ namespace JudgeServer {
 
         // C 코드 채점
         private static async Task<JudgeResult> JudgeCAsync(JudgeRequest request) {
-            return new JudgeResult();
+            // 반환할 채점 정보를 저장하는 객체
+            JudgeResult result = new JudgeResult();
+            // c언어 코드
+            string? code = request.Code;
+            // 코드의 언어
+            // TODO : JudgeRequest에서 Language 속성 제거?
+            string? language = request.Language;
+
+            // 입력 테스트 케이스
+            List<string> inputCases;
+            // 출력 테스트 케이스
+            List<string> outputCases;
+            // 실행 시간(ms) 제한
+            double executionTimeLimit;
+            // 메모리 사용량(KB) 제한
+            long memoryUsageLimit;
+
+            // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
+            GetTestCases(out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
+
+            // 채점 요청별로 사용할 유니크한 폴더명
+            string folderName;
+
+            // 유저 제출 폴더, 입력케이스, 컴파일 에러 메시지, 런타임 에러 메시지, 실행 결과, 실행 시간과 메모리 사용량이 저장되는 경로들
+            string folderPath, inputFilePath, compileErrorFilePath, runtimeErrorFilePath, resultFilePath, statFilePath;
+
+            // 채점 제출 폴더를 생성하고 내부에 생성되는 파일들의 경로를 받아옴
+            CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out resultFilePath, out statFilePath);
+
+            // 코드를 언어에 맞는 형식을 가지는 파일로 저장
+            string codeFilePath;
+            CreateCodeFile(in folderPath, in code, in language, out codeFilePath);
+
+            // Docker Hub에서의 이미지 태그
+            string imageTag = language;
+
+            // Docker client 초기화
+            // TODO : dockerClient, volumeMapping이 null이 아닐 때 예외처리 필요
+            var dockerTuple = await InitDockerClientAsync(imageTag, folderPath, folderName);
+            DockerClient? dockerClient = dockerTuple.Item1;
+            Dictionary<string, string>? volumeMapping = dockerTuple.Item2;
+
+            // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
+            double avgExecutionTime = 0;
+            long avgMemoryUsage = 0;
+
+            // 케이스 횟수
+            int caseCount = outputCases.Count();
+
+            // 테스트 케이스 수행
+            for (int i = 0; i < caseCount; i++) {
+                // 입력 케이스를 파일로 저장
+                File.WriteAllText(inputFilePath, inputCases[i]);
+
+                // 컨테이너 구동
+                await RunDockerContainerAsync(dockerClient, volumeMapping, imageTag, folderName);
+
+                // 컴파일 에러인지 체크
+                if (IsOccuredCompileError(in compileErrorFilePath, ref result)) {
+                    break;
+                }
+
+                // 런타임 에러가 발생했는지 체크
+                if (IsOccuredRuntimeError(in runtimeErrorFilePath, ref result)) {
+                    break;
+                }
+
+                // 실행 시간과 메모리 사용량
+                double executionTime;
+                long memoryUsage;
+
+                // 실행 시간, 메모리 사용량 측정 값을 받아옴
+                GetStats(in statFilePath, out executionTime, out memoryUsage);
+                Console.WriteLine($"limit : {executionTimeLimit} / acutal : {executionTime}");
+
+                // 시간 초과가 발생했는지 체크
+                if (IsExceededTimeLimit(in executionTime, in executionTimeLimit, ref result)) {
+                    break;
+                }
+
+                // 메모리 초과가 발생했는지 체크
+                if (IsExceededMemoryLimit(in memoryUsage, in memoryUsageLimit, ref result)) {
+                    break;
+                }
+
+                // 평균 실행 시간 및 메모리 사용량 계산
+                avgExecutionTime += executionTime;
+                avgMemoryUsage += memoryUsage;
+
+                // 현재 진행 중인 테스트 케이스의 출력 케이스
+                string outputCase = outputCases[i];
+
+                // 실행 결과와 출력 케이스 비교
+                if (!JudgeTestCase(in outputCase, in resultFilePath, ref result)) {
+                    break;
+                }
+
+                Console.WriteLine($"{i + 1}번째 케이스 통과");
+
+                // 테스트 케이스에서 사용하는 파일 초기화
+                InitFile(in inputFilePath, in resultFilePath);
+            }
+
+            // 채점 제출 폴더 삭제
+            // TODO : 현재는 디버깅을 위해 주석처리
+            //DeleteSubmitFolder(in folderPath);
+
+            // 모든 테스트 케이스를 수행하면 결과를 저장해 JudgeResult 객체 반환
+            return GetJudgeResult(in caseCount, ref result, ref avgExecutionTime, ref avgMemoryUsage);
         }
 
         // C++ 코드 채점
