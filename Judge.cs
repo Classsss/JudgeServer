@@ -405,6 +405,10 @@ namespace JudgeServer {
             DockerClient? dockerClient = dockerTuple.Item1;
             Dictionary<string, string>? volumeMapping = dockerTuple.Item2;
 
+            // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
+            double avgExecutionTime = 0;
+            long avgMemoryUsage = 0;
+
             // 케이스 횟수
             int caseCount = outputCases.Count();
 
@@ -443,6 +447,20 @@ namespace JudgeServer {
                 if (IsExceededMemoryLimit(in memoryUsage, in memoryUsageLimit, ref result)) {
                     break;
                 }
+
+                // 평균 실행 시간 및 메모리 사용량 계산
+                avgExecutionTime += executionTime;
+                avgMemoryUsage += memoryUsage;
+
+                // 현재 진행 중인 테스트 케이스의 출력 케이스
+                string outputCase = outputCases[i];
+
+                // 실행 결과와 출력 케이스 비교
+                if (!JudgeTestCase(in outputCase, in resultFilePath, ref result)) {
+                    break;
+                }
+
+                Console.WriteLine($"{i + 1}번째 케이스 통과");
             }
 
             return result;
