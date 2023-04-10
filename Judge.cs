@@ -466,6 +466,10 @@ namespace JudgeServer {
                 InitFile(in inputFilePath, in resultFilePath);
             }
 
+            // 채점 제출 폴더 삭제
+            // TODO : 현재는 디버깅을 위해 주석처리
+            //DeleteSubmitFolder(in folderPath);
+
             return result;
         }
 
