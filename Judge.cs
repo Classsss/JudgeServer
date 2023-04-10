@@ -461,6 +461,9 @@ namespace JudgeServer {
                 }
 
                 Console.WriteLine($"{i + 1}번째 케이스 통과");
+
+                // 테스트 케이스에서 사용하는 파일 초기화
+                InitFile(in inputFilePath, in resultFilePath);
             }
 
             return result;
