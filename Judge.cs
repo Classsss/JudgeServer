@@ -397,7 +397,7 @@ namespace JudgeServer {
             CreateCodeFile(in folderPath, in code, in language, out codeFilePath);
 
             // Docker Hub에서의 이미지 태그
-            string imageTag = code;
+            string imageTag = language;
 
             // Docker client 초기화
             // TODO : dockerClient, volumeMapping이 null이 아닐 때 예외처리 필요
