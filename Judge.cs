@@ -395,6 +395,15 @@ namespace JudgeServer {
             // 코드를 언어에 맞는 형식을 가지는 파일로 저장
             string codeFilePath;
             CreateCodeFile(in folderPath, in code, in language, out codeFilePath);
+
+            // Docker Hub에서의 이미지 태그
+            string imageTag = code;
+
+            // Docker client 초기화
+            // TODO : dockerClient, volumeMapping이 null이 아닐 때 예외처리 필요
+            var dockerTuple = await InitDockerClientAsync(imageTag, folderPath, folderName);
+            DockerClient? dockerClient = dockerTuple.Item1;
+            Dictionary<string, string>? volumeMapping = dockerTuple.Item2;
         }
 
         // C++ 코드 채점
