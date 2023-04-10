@@ -404,6 +404,20 @@ namespace JudgeServer {
             var dockerTuple = await InitDockerClientAsync(imageTag, folderPath, folderName);
             DockerClient? dockerClient = dockerTuple.Item1;
             Dictionary<string, string>? volumeMapping = dockerTuple.Item2;
+
+            // 케이스 횟수
+            int caseCount = outputCases.Count();
+
+            // 테스트 케이스 수행
+            for (int i = 0; i < caseCount; i++) {
+                // 입력 케이스를 파일로 저장
+                File.WriteAllText(inputFilePath, inputCases[i]);
+
+                // 컨테이너 구동
+                await RunDockerContainerAsync(dockerClient, volumeMapping, imageTag, folderName);
+            }
+
+            return result;
         }
 
         // C++ 코드 채점
