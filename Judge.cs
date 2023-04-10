@@ -415,6 +415,16 @@ namespace JudgeServer {
 
                 // 컨테이너 구동
                 await RunDockerContainerAsync(dockerClient, volumeMapping, imageTag, folderName);
+
+                // 컴파일 에러인지 체크
+                if (IsOccuredCompileError(in compileErrorFilePath, ref result)) {
+                    break;
+                }
+
+                // 런타임 에러가 발생했는지 체크
+                if (IsOccuredRuntimeError(in runtimeErrorFilePath, ref result)) {
+                    break;
+                }
             }
 
             return result;
