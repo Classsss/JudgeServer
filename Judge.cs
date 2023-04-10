@@ -379,8 +379,22 @@ namespace JudgeServer {
             double executionTimeLimit;
             // 메모리 사용량(KB) 제한
             long memoryUsageLimit;
+
             // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
             GetTestCases(out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
+
+            // 채점 요청별로 사용할 유니크한 폴더명
+            string folderName;
+
+            // 유저 제출 폴더, 입력케이스, 컴파일 에러 메시지, 런타임 에러 메시지, 실행 결과, 실행 시간과 메모리 사용량이 저장되는 경로들
+            string folderPath, inputFilePath, compileErrorFilePath, runtimeErrorFilePath, resultFilePath, statFilePath;
+
+            // 채점 제출 폴더를 생성하고 내부에 생성되는 파일들의 경로를 받아옴
+            CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out resultFilePath, out statFilePath);
+
+            // 코드를 언어에 맞는 형식을 가지는 파일로 저장
+            string codeFilePath;
+            CreateCodeFile(in folderPath, in code, in language, out codeFilePath);
         }
 
         // C++ 코드 채점
