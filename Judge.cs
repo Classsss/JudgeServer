@@ -425,6 +425,24 @@ namespace JudgeServer {
                 if (IsOccuredRuntimeError(in runtimeErrorFilePath, ref result)) {
                     break;
                 }
+
+                // 실행 시간과 메모리 사용량
+                double executionTime;
+                long memoryUsage;
+
+                // 실행 시간, 메모리 사용량 측정 값을 받아옴
+                GetStats(in statFilePath, out executionTime, out memoryUsage);
+                Console.WriteLine($"limit : {executionTimeLimit} / acutal : {executionTime}");
+
+                // 시간 초과가 발생했는지 체크
+                if (IsExceededTimeLimit(in executionTime, in executionTimeLimit, ref result)) {
+                    break;
+                }
+
+                // 메모리 초과가 발생했는지 체크
+                if (IsExceededMemoryLimit(in memoryUsage, in memoryUsageLimit, ref result)) {
+                    break;
+                }
             }
 
             return result;
