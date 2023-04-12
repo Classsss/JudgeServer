@@ -16,7 +16,7 @@ namespace JudgeServer {
         private const string PYTHON = "python";
 
         // 채점 폴더가 생성될 기본 경로
-        private const string SUBMIT_FOLDER_PATH = @"C:\Users\LeeHaYoon\Desktop\docker\";
+        private const string SUBMIT_FOLDER_PATH = "docker";
 
         // 도커 이미지 이름
         private const string IMAGE_NAME = "leehayoon/judge";
@@ -186,7 +186,7 @@ namespace JudgeServer {
             folderName = Guid.NewGuid().ToString();
 
             // 채점 제출 폴더 생성
-            folderPath = Path.Combine(SUBMIT_FOLDER_PATH, language, folderName);
+            folderPath = Path.Combine(Directory.GetCurrentDirectory(), SUBMIT_FOLDER_PATH, language, folderName);
 
             // 폴더가 존재하지 않는 경우에만 폴더를 생성합니다.
             if (!Directory.Exists(folderPath)) {
