@@ -393,7 +393,7 @@ namespace JudgeServer {
         private static bool JudgeTestCase(in string outputCase, in string resultFilePath, ref JudgeResult result) {
             // 출력 케이스와 결과 비교
             string expectedOutput = outputCase;
-            string actualOutput = File.Exists(resultFilePath) ? File.ReadAllText(resultFilePath) : "";
+            string actualOutput = (File.Exists(resultFilePath) ? File.ReadAllText(resultFilePath) : "").Trim();
             Console.WriteLine($"expected : {expectedOutput} / actual : {actualOutput}");
 
             // 틀림
