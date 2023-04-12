@@ -21,18 +21,6 @@ namespace JudgeServer {
         // 도커 이미지 이름
         private const string IMAGE_NAME = "leehayoon/judge";
 
-        // Judge 클래스에서 유일하게 접근할 수 있는 Judge 함수 Handler
-        // 이 Dictionary 객체를 언어 문자열로 인덱싱하여 JudgeRequest 객체를 인자로 전달하여 사용
-        // Ex) JudgeResult result = JudgeHandler["c"](request); == JudgeC(request)
-        public static Dictionary<string, Func<JudgeRequest, Task<JudgeResult>>> JudgeHandler;
-
-        // static class의 생성자
-        static Judge() {
-            // Judge 함수 Handler를 초기화
-            JudgeHandler = new Dictionary<string, Func<JudgeRequest, Task<JudgeResult>>>() {
-                { C, JudgeCAsync }, { CPP, JudgeCppAsync }, { CSHARP, JudgeCSharpAsync }, { JAVA, JudgeJavaAsync }, { PYTHON, JudgePythonAsync } };
-        }
-
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
         /// </summary>

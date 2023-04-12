@@ -14,7 +14,7 @@ namespace JudgeServer.Controllers {
             Console.WriteLine("#코드 : " + request.Code);
 
             // 코드를 채점한 결과를 받는다.
-            JudgeResult result = await Judge.JudgeHandler[request.Language](request);
+            JudgeResult result = await Judge.JudgeCodeAsync(request);
 
             return Ok(result);
         }
