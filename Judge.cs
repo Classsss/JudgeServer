@@ -206,7 +206,19 @@ namespace JudgeServer {
             // 파이썬의 경우 언어 이름과 파일 형식이 다름
             if (language == "python") {
                 codeFilePath = Path.Combine(folderPath, "Main.py");
-            } else {
+            } 
+            // C#의 경우 언어 이름과 파일 형식이 다름
+            else if (language == "csharp") {
+                codeFilePath = Path.Combine(folderPath, "Main.cs");
+
+                // C# 코드 실행을 위한 .csproj 파일을 상위 폴더에서 복사해옴
+                string parentDirectory = Directory.GetParent(folderPath).FullName;
+                string sourceProjFilePath = Path.Combine(parentDirectory, "Main.csproj");
+                string destProjFilePath = Path.Combine(folderPath, "Main.csproj");
+                File.Copy(sourceProjFilePath, destProjFilePath, true);
+            } 
+            // 나머지 경우 언어 이름과 파일 형식이 동일함
+            else {
                 codeFilePath = Path.Combine(folderPath, $"Main.{language}");
             }
             File.WriteAllText(codeFilePath, code);
