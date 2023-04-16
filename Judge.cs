@@ -289,6 +289,30 @@ namespace JudgeServer {
         }
 
         /// <summary>
+        /// 컴파일 에러 메시지에서 필요없는 문장을 제거함
+        /// </summary>
+        /// <param name="originalMsg">원본 컴파일 에러 메시지</param>
+        /// <param name="language">코드의 언어</param>
+        /// <returns>편집된 컴파일 에러 메시지</returns>
+        private static string ModifyCompileErrorMsg(in string originalMsg, in string language) {
+            string modifiedMsg = originalMsg;
+            switch (language) {
+                case "csharp":
+                    string[] cSharpLines = originalMsg.Split('\n');
+                    cSharpLines = cSharpLines.Where((line, index) => (!(index >= 0 && index <= 2) && !(index >= 6 && index <= (cSharpLines.Length - 1)))).ToArray();
+                    modifiedMsg = string.Join("\n", cSharpLines);
+                    break;
+                case "java":
+                    string[] javaLines = originalMsg.Split('\n');
+                    javaLines = javaLines.Where((line, index) => (index != (javaLines.Length - 1) && index != (javaLines.Length - 2))).ToArray();
+                    modifiedMsg = string.Join("\n", javaLines);
+                    break;
+            }
+
+            return modifiedMsg;
+        }
+
+        /// <summary>
         /// 컴파일 에러가 발생했는지 체크
         /// </summary>
         /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
