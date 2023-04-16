@@ -84,12 +84,12 @@ namespace JudgeServer {
                 await RunDockerContainerAsync(dockerClient, volumeMapping, imageTag, folderName);
 
                 // 컴파일 에러인지 체크
-                if (IsOccuredCompileError(in compileErrorFilePath, ref result)) {
+                if (IsOccuredCompileError(in compileErrorFilePath, in folderName, in language, ref result)) {
                     break;
                 }
 
                 // 런타임 에러가 발생했는지 체크
-                if (IsOccuredRuntimeError(in runtimeErrorFilePath, ref result)) {
+                if (IsOccuredRuntimeError(in runtimeErrorFilePath, in folderName, in language, ref result)) {
                     break;
                 }
 
@@ -281,18 +281,76 @@ namespace JudgeServer {
         }
 
         /// <summary>
+        /// 에러 메시지에서 폴더명을 제거하여 반환
+        /// </summary>
+        /// <param name="originalMsg">원본 에러 메시지</param>
+        /// <param name="folderName">폴더명</param>
+        /// <returns>폴더명이 제거된 에러 메시지</returns>
+        private static string GetMessageWithoutFolderName(in string originalMsg, in string folderName) {
+            return originalMsg.Replace($"{folderName}/", "");
+        }
+
+        /// <summary>
+        /// 컴파일 에러 메시지에서 필요없는 문장을 제거함
+        /// </summary>
+        /// <param name="originalMsg">원본 컴파일 에러 메시지</param>
+        /// <param name="language">코드의 언어</param>
+        /// <returns>편집된 컴파일 에러 메시지</returns>
+        private static string ModifyCompileErrorMsg(in string originalMsg, in string language) {
+            string modifiedMsg = originalMsg;
+            switch (language) {
+                case "csharp":
+                    string[] cSharpLines = originalMsg.Split('\n');
+                    cSharpLines = cSharpLines.Where((line, index) => (!(index >= 0 && index <= 2) && !(index >= 6 && index <= (cSharpLines.Length - 1)))).ToArray();
+                    modifiedMsg = string.Join("\n", cSharpLines);
+                    break;
+                case "java":
+                    string[] javaLines = originalMsg.Split('\n');
+                    javaLines = javaLines.Where((line, index) => (index != (javaLines.Length - 1) && index != (javaLines.Length - 2))).ToArray();
+                    modifiedMsg = string.Join("\n", javaLines);
+                    break;
+            }
+
+            return modifiedMsg;
+        }
+
+        /// <summary>
+        /// 런타임 에러 메시지에서 필요없는 문장을 제거함
+        /// </summary>
+        /// <param name="originalMsg">원본 런타임 에러 메시지</param>
+        /// <param name="language">코드의 언어</param>
+        /// <returns>편집된 런타임 에러 메시지</returns>
+        private static string ModifyRuntimeErrorMsg(in string originalMsg, in string language) {
+            string modifiedMsg = originalMsg;
+            switch (language) {
+                case "c":
+                case "cpp":
+                    string[] lines = originalMsg.Split('\n');
+                    lines = lines.Where((line, index) => (index != 0 && index != 1)).ToArray();
+                    modifiedMsg = string.Join("\n", lines);
+                    break;
+            }
+
+            return modifiedMsg;
+        }
+
+        /// <summary>
         /// 컴파일 에러가 발생했는지 체크
         /// </summary>
         /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
         /// <param name="result">채점 결과를 저장하는 객체</param>
         /// <returns>컴파일 에러가 발생할 때 true</returns>
-        private static bool IsOccuredCompileError(in string compileErrorFilePath, ref JudgeResult result) {
+        private static bool IsOccuredCompileError(in string compileErrorFilePath, in string folderName, in string language, ref JudgeResult result) {
             // 컴파일 에러 발생
             if (File.Exists(compileErrorFilePath)) {
                 string errorMsg = File.ReadAllText(compileErrorFilePath);
 
                 if (errorMsg.Length != 0) {
-                    Console.WriteLine("Compile Error Occured : ", errorMsg);
+                    // 에러 메시지에서 폴더명 제거
+                    errorMsg = GetMessageWithoutFolderName(in errorMsg, in folderName);
+                    // 에러 메시지에서 필요없는 문장 제거
+                    errorMsg = ModifyCompileErrorMsg(errorMsg, language);
+                    Console.WriteLine("Compile Error Occured : " + errorMsg);
 
                     result.Result = JudgeResult.JResult.CompileError;
                     result.Message = errorMsg;
@@ -309,13 +367,17 @@ namespace JudgeServer {
         /// <param name="runtimeErrorFilePath">런타임 에러 메시지가 저장되는 경로</param>
         /// <param name="result">채점 결과를 저장하는 객체</param>
         /// <returns>런타임 에러가 발생할 때 true</returns>
-        private static bool IsOccuredRuntimeError(in string runtimeErrorFilePath, ref JudgeResult result) {
+        private static bool IsOccuredRuntimeError(in string runtimeErrorFilePath, in string folderName, in string language, ref JudgeResult result) {
             // 런타임 에러가 발생했는지 체크
             if (File.Exists(runtimeErrorFilePath)) {
                 string errorMsg = File.ReadAllText(runtimeErrorFilePath);
 
                 if (errorMsg.Length != 0) {
-                    Console.WriteLine("Runtime Error Occured : ", errorMsg);
+                    // 에러 메시지에서 폴더명 제거
+                    errorMsg = GetMessageWithoutFolderName(in errorMsg, in folderName);
+                    // 에러 메시지에서 필요없는 문장 제거
+                    errorMsg = ModifyRuntimeErrorMsg(errorMsg, language);
+                    Console.WriteLine("Runtime Error Occured : " + errorMsg);
 
                     result.Result = JudgeResult.JResult.RuntimeError;
                     result.Message = errorMsg;
