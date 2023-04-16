@@ -83,12 +83,12 @@ namespace JudgeServer {
                 await RunDockerContainerAsync(dockerClient, volumeMapping, imageTag, folderName);
 
                 // 컴파일 에러인지 체크
-                if (IsOccuredCompileError(in compileErrorFilePath, ref result)) {
+                if (IsOccuredCompileError(in compileErrorFilePath, in folderName, ref result)) {
                     break;
                 }
 
                 // 런타임 에러가 발생했는지 체크
-                if (IsOccuredRuntimeError(in runtimeErrorFilePath, ref result)) {
+                if (IsOccuredRuntimeError(in runtimeErrorFilePath, in folderName, ref result)) {
                     break;
                 }
 
@@ -285,7 +285,6 @@ namespace JudgeServer {
         /// <param name="folderName">폴더명</param>
         /// <returns>폴더명이 제거된 에러 메시지</returns>
         private static string GetMessageWithoutFolderName(in string originalMsg, in string folderName) {
-            Console.WriteLine("폴더명 제거 전");
             return originalMsg.Replace($"{folderName}/", "");
         }
 
@@ -295,13 +294,15 @@ namespace JudgeServer {
         /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
         /// <param name="result">채점 결과를 저장하는 객체</param>
         /// <returns>컴파일 에러가 발생할 때 true</returns>
-        private static bool IsOccuredCompileError(in string compileErrorFilePath, ref JudgeResult result) {
+        private static bool IsOccuredCompileError(in string compileErrorFilePath, in string folderName, ref JudgeResult result) {
             // 컴파일 에러 발생
             if (File.Exists(compileErrorFilePath)) {
                 string errorMsg = File.ReadAllText(compileErrorFilePath);
 
                 if (errorMsg.Length != 0) {
-                    Console.WriteLine("Compile Error Occured : ", errorMsg);
+                    // 에러 메시지에서 폴더명 제거
+                    errorMsg = GetMessageWithoutFolderName(in errorMsg, in folderName);
+                    Console.WriteLine("Compile Error Occured : " + errorMsg);
 
                     result.Result = JudgeResult.JResult.CompileError;
                     result.Message = errorMsg;
@@ -318,13 +319,15 @@ namespace JudgeServer {
         /// <param name="runtimeErrorFilePath">런타임 에러 메시지가 저장되는 경로</param>
         /// <param name="result">채점 결과를 저장하는 객체</param>
         /// <returns>런타임 에러가 발생할 때 true</returns>
-        private static bool IsOccuredRuntimeError(in string runtimeErrorFilePath, ref JudgeResult result) {
+        private static bool IsOccuredRuntimeError(in string runtimeErrorFilePath, in string folderName, ref JudgeResult result) {
             // 런타임 에러가 발생했는지 체크
             if (File.Exists(runtimeErrorFilePath)) {
                 string errorMsg = File.ReadAllText(runtimeErrorFilePath);
 
                 if (errorMsg.Length != 0) {
-                    Console.WriteLine("Runtime Error Occured : ", errorMsg);
+                    // 에러 메시지에서 폴더명 제거
+                    errorMsg = GetMessageWithoutFolderName(in errorMsg, in folderName);
+                    Console.WriteLine("Runtime Error Occured : " + errorMsg);
 
                     result.Result = JudgeResult.JResult.RuntimeError;
                     result.Message = errorMsg;
