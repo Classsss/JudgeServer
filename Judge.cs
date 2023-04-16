@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Docker.DotNet;
 using Docker.DotNet.Models;
+using Newtonsoft.Json;
 
 namespace JudgeServer {
     public class Judge {
@@ -130,6 +131,7 @@ namespace JudgeServer {
 
             // 채점 제출 폴더 삭제
             DeleteSubmitFolder(in folderPath);
+
 
             // 모든 테스트 케이스를 수행하면 결과를 저장해 JudgeResult 객체 반환
             return GetJudgeResult(in caseCount, ref result, ref avgExecutionTime, ref avgMemoryUsage);
@@ -471,6 +473,7 @@ namespace JudgeServer {
             Console.WriteLine("모든 케이스 통과");
             Console.WriteLine("avgExecutionTime : " + avgExecutionTime);
             Console.WriteLine("avgMemoryUsage : " + avgMemoryUsage);
+
 
             return result;
         }
