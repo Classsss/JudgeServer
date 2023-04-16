@@ -279,6 +279,17 @@ namespace JudgeServer {
         }
 
         /// <summary>
+        /// 에러 메시지에서 폴더명을 제거하여 반환
+        /// </summary>
+        /// <param name="originalMsg">원본 에러 메시지</param>
+        /// <param name="folderName">폴더명</param>
+        /// <returns>폴더명이 제거된 에러 메시지</returns>
+        private static string GetMessageWithoutFolderName(in string originalMsg, in string folderName) {
+            Console.WriteLine("폴더명 제거 전");
+            return originalMsg.Replace($"{folderName}/", "");
+        }
+
+        /// <summary>
         /// 컴파일 에러가 발생했는지 체크
         /// </summary>
         /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
