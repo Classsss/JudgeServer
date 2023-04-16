@@ -313,6 +313,26 @@ namespace JudgeServer {
         }
 
         /// <summary>
+        /// 런타임 에러 메시지에서 필요없는 문장을 제거함
+        /// </summary>
+        /// <param name="originalMsg">원본 런타임 에러 메시지</param>
+        /// <param name="language">코드의 언어</param>
+        /// <returns>편집된 런타임 에러 메시지</returns>
+        private static string ModifyRuntimeErrorMsg(in string originalMsg, in string language) {
+            string modifiedMsg = originalMsg;
+            switch (language) {
+                case "c":
+                case "cpp":
+                    string[] lines = originalMsg.Split('\n');
+                    lines = lines.Where((line, index) => (index != 0 && index != 1)).ToArray();
+                    modifiedMsg = string.Join("\n", lines);
+                    break;
+            }
+
+            return modifiedMsg;
+        }
+
+        /// <summary>
         /// 컴파일 에러가 발생했는지 체크
         /// </summary>
         /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
