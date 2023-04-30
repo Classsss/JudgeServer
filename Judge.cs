@@ -4,15 +4,6 @@ using Docker.DotNet.Models;
 
 namespace JudgeServer {
     public class Judge {
-        // 각 언어들의 심볼릭 상수
-        // NOTE : 채점 DB에서 과제의 요구 언어를 string으로 저장할 것으로 예상하여 상수의 값을 string으로 설정함
-        // TODO : 채점 DB 연동 후에 필요없다면 제거 필요
-        private const string C = "c";
-        private const string CPP = "cpp";
-        private const string CSHARP = "csharp";
-        private const string JAVA = "java";
-        private const string PYTHON = "python";
-
         // 채점 폴더가 생성될 기본 경로
         private const string SUBMIT_FOLDER_PATH = "docker";
 
@@ -30,7 +21,6 @@ namespace JudgeServer {
             // 전달받은 코드
             string? code = request.Code;
             // 코드의 언어
-            // TODO : JudgeRequest에서 Language 속성 제거?
             string? language = request.Language;
 
             // 입력 테스트 케이스
@@ -136,23 +126,14 @@ namespace JudgeServer {
         }
 
         /// <summary>
-        /// 채점 DB에서 입출력 테스트 케이스, 실행 시간 제한, 메모리 사용량 제한 값을 받아옴
+        /// 파라미터로 전달받은 JudgeRequest 모델 객체에서 입출력 테스트 케이스, 실행 시간 제한, 메모리 사용량 제한 값을 받아옴
         /// </summary>
         /// <param name="inputCases">입력 테스트 케이스</param>
         /// <param name="outputCases">출력 테스트 케이스</param>
         /// <param name="executionTimeLimit">실행 시간 제한</param>
         /// <param name="memoryUsageLimit">메모리 사용량 제한</param>
         private static void GetTestCases(out List<string> inputCases, out List<string> outputCases, out double executionTimeLimit, out long memoryUsageLimit) {
-            // TODO : 채점 DB에서 입출력 테스트 케이스, 실행 시간 제한, 메모리 사용량 제한 받아오기
-            // TODO : 채점 DB에서 가져오는 값들이 교수가 과제를 등록할 때 정할 수 있다면, 정해진 값들만 사용하도록 코드 개선 필요
-            // 입력 테스트 케이스
-            inputCases = new List<string> { "1 2", "5 9", "-3 3" };
-            // 출력 테스트 케이스
-            outputCases = new List<string> { "3", "14", "0" };
-            // 실행 시간(ms) 제한 - 500ms
-            executionTimeLimit = 500;
-            // 메모리 사용량(KB) 제한 - 512KB
-            memoryUsageLimit = 512;
+
         }
 
         /// <summary>
