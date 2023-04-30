@@ -1,7 +1,10 @@
 ﻿namespace JudgeServer {
     public class JudgeRequest {
-        public string? Id { get; set; }         // 문제를 식별할 수 있는 Id
-        public string? Code { get; set; }       // 에디터에 작성하여 제출한 코드
-        public string? Language { get; set; }   // 코드의 언어 // TODO : 채점 DB와 연결하면 제거, 현재는 디버깅을 위해 사용
+        public string Code { get; set; }                  // 에디터에 작성하여 제출한 코드
+        public string Language { get; set; }              // 코드의 프로그래밍 언어
+        public List<string> InputCases { get; set; }      // 입력 테스트 케이스
+        public List<string> OutputCases { get; set; }     // 출력 테스트 케이스
+        public double ExecutionTimeLimit { get; set; }    // 실행 시간 제한
+        public long MemoryUsageLimit { get; set; }        // 메모리 사용량 제한
     }
 }
