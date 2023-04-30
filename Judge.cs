@@ -18,11 +18,11 @@ namespace JudgeServer {
         public static async Task<JudgeResult> JudgeCodeAsync(JudgeRequest request) {
             // 반환할 채점 정보를 저장하는 객체
             JudgeResult result = new JudgeResult();
-            // 전달받은 코드
-            string? code = request.Code;
-            // 코드의 언어
-            string? language = request.Language;
 
+            // 전달받은 코드
+            string code;
+            // 코드의 언어
+            string language;
             // 입력 테스트 케이스
             List<string> inputCases;
             // 출력 테스트 케이스
@@ -33,7 +33,7 @@ namespace JudgeServer {
             long memoryUsageLimit;
 
             // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
-            GetTestCases(out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
+            GetJudgeData(in request, out code, out language, out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
 
             // 채점 요청별로 사용할 유니크한 폴더명
             string folderName;
@@ -128,12 +128,20 @@ namespace JudgeServer {
         /// <summary>
         /// 파라미터로 전달받은 JudgeRequest 모델 객체에서 입출력 테스트 케이스, 실행 시간 제한, 메모리 사용량 제한 값을 받아옴
         /// </summary>
+        /// <param name="request">파라미터로 전달받은 JudgeRequest 모델 객체</param>
+        /// <param name="code">채점할 코드</param>
+        /// <param name="language">코드의 프로그래밍 언어</param>
         /// <param name="inputCases">입력 테스트 케이스</param>
         /// <param name="outputCases">출력 테스트 케이스</param>
         /// <param name="executionTimeLimit">실행 시간 제한</param>
         /// <param name="memoryUsageLimit">메모리 사용량 제한</param>
-        private static void GetTestCases(out List<string> inputCases, out List<string> outputCases, out double executionTimeLimit, out long memoryUsageLimit) {
-
+        private static void GetJudgeData(in JudgeRequest request, out string code, out string language, out List<string> inputCases, out List<string> outputCases, out double executionTimeLimit, out long memoryUsageLimit) {
+            code = request.Code;
+            language = request.Language;
+            inputCases = request.InputCases;
+            outputCases = request.OutputCases;
+            executionTimeLimit = request.ExecutionTimeLimit;
+            memoryUsageLimit = request.MemoryUsageLimit;
         }
 
         /// <summary>
