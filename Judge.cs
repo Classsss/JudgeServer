@@ -8,7 +8,7 @@ namespace JudgeServer {
         private const string SUBMIT_FOLDER_PATH = "docker";
 
         // 도커 이미지 이름
-        private const string IMAGE_NAME = "leehayoon/judge";
+        private const string IMAGE_NAME = "madebyzino/docker_hub_test";
 
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
@@ -19,34 +19,34 @@ namespace JudgeServer {
             // 반환할 채점 정보를 저장하는 객체
             JudgeResult result = new JudgeResult();
 
-            // 전달받은 코드
-            string code;
+            // 교수 정답 코드
+            string correctCode;
+            // 학생 제출 코드
+            string submitCode;
             // 코드의 언어
             string language;
             // 입력 테스트 케이스
             List<string> inputCases;
-            // 출력 테스트 케이스
-            List<string> outputCases;
             // 실행 시간(ms) 제한
             double executionTimeLimit;
             // 메모리 사용량(KB) 제한
             long memoryUsageLimit;
 
             // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
-            GetJudgeData(in request, out code, out language, out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
+            GetJudgeData(in request, out correctCode, out submitCode, out language, out inputCases, out executionTimeLimit, out memoryUsageLimit);
 
             // 채점 요청별로 사용할 유니크한 폴더명
             string folderName;
 
-            // 유저 제출 폴더, 입력케이스, 컴파일 에러 메시지, 런타임 에러 메시지, 실행 결과, 실행 시간과 메모리 사용량이 저장되는 경로들
-            string folderPath, inputFilePath, compileErrorFilePath, runtimeErrorFilePath, resultFilePath, statFilePath;
+            // 유저 제출 폴더, 입력케이스, 컴파일 에러 메시지, 런타임 에러 메시지, 정답 코드 실행 결과, 제출 코드 실행 결과, 실행 시간과 메모리 사용량이 저장되는 경로들
+            string folderPath, inputFilePath, compileErrorFilePath, runtimeErrorFilePath, correctResultFilePath, submitResultFilePath,  statFilePath;
 
             // 채점 제출 폴더를 생성하고 내부에 생성되는 파일들의 경로를 받아옴
-            CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out resultFilePath, out statFilePath);
+            CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out correctResultFilePath, out submitResultFilePath, out statFilePath);
 
             // 코드를 언어에 맞는 형식을 가지는 파일로 저장
             string codeFilePath;
-            CreateCodeFile(in folderPath, in code, in language, out codeFilePath);
+            CreateCodeFile(in folderPath, in correctCode, in submitCode, in language, out codeFilePath);
 
             // Docker Hub에서의 이미지 태그
             string imageTag = language;
@@ -62,10 +62,11 @@ namespace JudgeServer {
             long avgMemoryUsage = 0;
 
             // 케이스 횟수
-            int caseCount = outputCases.Count();
-
-            // 테스트 케이스 수행
-            for (int i = 0; i < caseCount; i++) {
+            int caseCount = inputCases.Count();
+            int i = 0;
+            // 테스트 케이스 수행 (입력케이스 기준으로 바꿨으므로 do while문으로 수정)
+            do
+            {
                 // 입력 케이스를 파일로 저장
                 File.WriteAllText(inputFilePath, inputCases[i]);
 
@@ -73,12 +74,14 @@ namespace JudgeServer {
                 await RunDockerContainerAsync(dockerClient, volumeMapping, imageTag, folderName);
 
                 // 컴파일 에러인지 체크
-                if (IsOccuredCompileError(in compileErrorFilePath, in folderName, in language, ref result)) {
+                if (IsOccuredCompileError(in compileErrorFilePath, in folderName, in language, ref result))
+                {
                     break;
                 }
 
                 // 런타임 에러가 발생했는지 체크
-                if (IsOccuredRuntimeError(in runtimeErrorFilePath, in folderName, in language, ref result)) {
+                if (IsOccuredRuntimeError(in runtimeErrorFilePath, in folderName, in language, ref result))
+                {
                     break;
                 }
 
@@ -91,12 +94,14 @@ namespace JudgeServer {
                 Console.WriteLine($"limit : {executionTimeLimit} / acutal : {executionTime}");
 
                 // 시간 초과가 발생했는지 체크
-                if (IsExceededTimeLimit(in executionTime, in executionTimeLimit, ref result)) {
+                if (IsExceededTimeLimit(in executionTime, in executionTimeLimit, ref result))
+                {
                     break;
                 }
 
                 // 메모리 초과가 발생했는지 체크
-                if (IsExceededMemoryLimit(in memoryUsage, in memoryUsageLimit, ref result)) {
+                if (IsExceededMemoryLimit(in memoryUsage, in memoryUsageLimit, ref result))
+                {
                     break;
                 }
 
@@ -104,19 +109,19 @@ namespace JudgeServer {
                 avgExecutionTime += executionTime;
                 avgMemoryUsage += memoryUsage;
 
-                // 현재 진행 중인 테스트 케이스의 출력 케이스
-                string outputCase = outputCases[i];
-
                 // 실행 결과와 출력 케이스 비교
-                if (!JudgeTestCase(in outputCase, in resultFilePath, ref result)) {
+                if (!JudgeTestCase(in correctResultFilePath, in submitResultFilePath, ref result))
+                {
                     break;
                 }
 
                 Console.WriteLine($"{i + 1}번째 케이스 통과");
 
                 // 테스트 케이스에서 사용하는 파일 초기화
-                InitFile(in inputFilePath, in resultFilePath);
-            }
+                InitFile(in inputFilePath, in correctResultFilePath,in submitResultFilePath);
+
+                i++;
+            } while (i < caseCount);
 
             // 채점 제출 폴더 삭제
             DeleteSubmitFolder(in folderPath);
@@ -129,17 +134,17 @@ namespace JudgeServer {
         /// 파라미터로 전달받은 JudgeRequest 모델 객체에서 입출력 테스트 케이스, 실행 시간 제한, 메모리 사용량 제한 값을 받아옴
         /// </summary>
         /// <param name="request">파라미터로 전달받은 JudgeRequest 모델 객체</param>
-        /// <param name="code">채점할 코드</param>
+        /// <param name="CorrectCode">정답 코드</param>
+        /// <param name="submitCode">채점할 코드</param>
         /// <param name="language">코드의 프로그래밍 언어</param>
         /// <param name="inputCases">입력 테스트 케이스</param>
-        /// <param name="outputCases">출력 테스트 케이스</param>
         /// <param name="executionTimeLimit">실행 시간 제한</param>
         /// <param name="memoryUsageLimit">메모리 사용량 제한</param>
-        private static void GetJudgeData(in JudgeRequest request, out string code, out string language, out List<string> inputCases, out List<string> outputCases, out double executionTimeLimit, out long memoryUsageLimit) {
-            code = request.Code;
+        private static void GetJudgeData(in JudgeRequest request, out string correctCode, out string submitCode, out string language, out List<string> inputCases, out double executionTimeLimit, out long memoryUsageLimit) {
+            correctCode = request.CorrectCode;
+            submitCode = request.SubmitCode;
             language = request.Language;
             inputCases = request.InputCases;
-            outputCases = request.OutputCases;
             executionTimeLimit = request.ExecutionTimeLimit;
             memoryUsageLimit = request.MemoryUsageLimit;
         }
@@ -153,9 +158,10 @@ namespace JudgeServer {
         /// <param name="inputFilePath">입력 케이스가 저장되는 경로</param>
         /// <param name="compileErrorFilePath">컴파일 에러 메시지가 저장되는 경로</param>
         /// <param name="runtimeErrorFilePath">런타임 에러 메시지가 저장되는 경로</param>
-        /// <param name="resultFilePath">결과가 저장되는 경로</param>
+        /// <param name="correctResultFilePath">교수 코드의 결과가 저장되는 경로</param>
+        /// <param name="submitResultFilePath">제출자 코드의 결과가 저장되는 경로</param>
         /// <param name="statFilePath">실행 시간과 메모리 사용량이 저장되는 경로</param>
-        private static void CreateSubmitFolder(in string language, out string folderName, out string folderPath, out string inputFilePath, out string compileErrorFilePath, out string runtimeErrorFilePath, out string resultFilePath, out string statFilePath) {
+        private static void CreateSubmitFolder(in string language, out string folderName, out string folderPath, out string inputFilePath, out string compileErrorFilePath, out string runtimeErrorFilePath, out string correctResultFilePath, out string submitResultFilePath, out string statFilePath) {
             // 128비트 크기의 유니크한 GUID로 폴더명 생성
             folderName = Guid.NewGuid().ToString();
 
@@ -177,8 +183,11 @@ namespace JudgeServer {
             // 런타임 에러 메시지의 경로
             runtimeErrorFilePath = Path.Combine(folderPath, "runtimeError.txt");
 
-            // 결과가 저장되는 경로
-            resultFilePath = Path.Combine(folderPath, "result.txt");
+            // 정답 결과가 저장되는 경로
+            correctResultFilePath = Path.Combine(folderPath, "correctResult.txt");
+
+            // 제출 결과가 저장되는 경로
+            submitResultFilePath = Path.Combine(folderPath, "submitResult.txt");
 
             // 실행 시간과 메모리 사용량이 저장되는 경로
             statFilePath = Path.Combine(folderPath, "stat.txt");
@@ -191,7 +200,31 @@ namespace JudgeServer {
         /// <param name="code">코드</param>
         /// <param name="language">코드의 언어</param>
         /// <param name="codeFilePath">코드 파일의 경로</param>
-        private static void CreateCodeFile(in string folderPath, in string code, in string language, out string codeFilePath) {
+        private static void CreateCodeFile(in string folderPath, in string correctCode, in string submitCode, in string language, out string codeFilePath) {
+            // 교수의 코드 파일 및 클래스는 Correct로 통일한다.
+            if (language == "python")
+            {
+                codeFilePath = Path.Combine(folderPath, "Correct.py");
+            }
+            // C#의 경우 언어 이름과 파일 형식이 다름
+            else if (language == "csharp")
+            {
+                codeFilePath = Path.Combine(folderPath, "Correct.cs");
+
+                // C# 코드 실행을 위한 .csproj 파일을 상위 폴더에서 복사해옴
+                string parentDirectory = Directory.GetParent(folderPath).FullName;
+                string sourceProjFilePath = Path.Combine(parentDirectory, "Correct.csproj");
+                string destProjFilePath = Path.Combine(folderPath, "Correct.csproj");
+                File.Copy(sourceProjFilePath, destProjFilePath, true);
+            }
+            // 나머지 경우 언어 이름과 파일 형식이 동일함
+            else
+            {
+                codeFilePath = Path.Combine(folderPath, $"Correct.{language}");
+            }
+            File.WriteAllText(codeFilePath, correctCode);
+
+            //제출자의 코드 파일 및 클래스는 Main으로 통일한다.
             // 파이썬의 경우 언어 이름과 파일 형식이 다름
             if (language == "python") {
                 codeFilePath = Path.Combine(folderPath, "Main.py");
@@ -210,7 +243,7 @@ namespace JudgeServer {
             else {
                 codeFilePath = Path.Combine(folderPath, $"Main.{language}");
             }
-            File.WriteAllText(codeFilePath, code);
+            File.WriteAllText(codeFilePath, submitCode);
         }
 
         /// <summary>
@@ -263,8 +296,8 @@ namespace JudgeServer {
             await dockerClient.Containers.WaitContainerAsync(createContainerResponse.ID);
 
             // 컨테이너 종료 및 삭제
-            await dockerClient.Containers.StopContainerAsync(createContainerResponse.ID, new ContainerStopParameters());
-            await dockerClient.Containers.RemoveContainerAsync(createContainerResponse.ID, new ContainerRemoveParameters());
+           // await dockerClient.Containers.StopContainerAsync(createContainerResponse.ID, new ContainerStopParameters());
+           // await dockerClient.Containers.RemoveContainerAsync(createContainerResponse.ID, new ContainerRemoveParameters());
         }
 
         /// <summary>
@@ -450,10 +483,10 @@ namespace JudgeServer {
         /// <param name="resultFilePath">결과가 저장되는 경로</param>
         /// <param name="result">채점 결과가 저장되는 객체</param>
         /// <returns>테스트 케이스를 통과했을 때 true</returns>
-        private static bool JudgeTestCase(in string outputCase, in string resultFilePath, ref JudgeResult result) {
+        private static bool JudgeTestCase(in string correctResultFilePath, in string submitResultFilePath, ref JudgeResult result) {
             // 출력 케이스와 결과 비교
-            string expectedOutput = outputCase;
-            string actualOutput = (File.Exists(resultFilePath) ? File.ReadAllText(resultFilePath) : "").Trim();
+            string expectedOutput = (File.Exists(correctResultFilePath) ? File.ReadAllText(correctResultFilePath) : "").Trim();
+            string actualOutput = (File.Exists(submitResultFilePath) ? File.ReadAllText(submitResultFilePath) : "").Trim();
             Console.WriteLine($"expected : {expectedOutput} / actual : {actualOutput}");
 
             // 틀림
@@ -472,15 +505,21 @@ namespace JudgeServer {
         /// </summary>
         /// <param name="inputFilePath">입력 케이스가 저장되는 경로</param>
         /// <param name="resultFilePath">결과가 저장되는 경로</param>
-        private static void InitFile(in string inputFilePath, in string resultFilePath) {
+        private static void InitFile(in string inputFilePath, in string correctResultFilePath, in string submitResultFilePath) {
             // 입력 파일 초기화
             if (File.Exists(inputFilePath)) {
                 File.WriteAllText(inputFilePath, string.Empty);
             }
 
-            // 결과 파일 초기화
-            if (File.Exists(resultFilePath)) {
-                File.WriteAllText(resultFilePath, string.Empty);
+            // 정답 결과 파일 초기화
+            if (File.Exists(correctResultFilePath))
+            {
+                File.WriteAllText(correctResultFilePath, string.Empty);
+            }
+
+            // 제출 결과 파일 초기화
+            if (File.Exists(submitResultFilePath)) {
+                File.WriteAllText(submitResultFilePath, string.Empty);
             }
         }
 
