@@ -10,8 +10,6 @@ namespace JudgeServer.Controllers {
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] JudgeRequest request) {
             Console.WriteLine("채점 시작");
-            Console.WriteLine("#문제 Id : " + request.Id);
-            Console.WriteLine("#코드 : " + request.Code);
 
             // 코드를 채점한 결과를 받는다.
             JudgeResult result = await Judge.JudgeCodeAsync(request);
