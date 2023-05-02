@@ -70,6 +70,8 @@ namespace JudgeServer {
             using (StreamReader reader = new StreamReader(downloadInfo.Content)) {
                 string readFileContent = await reader.ReadToEndAsync();
                 logger.LogInformation($"File content: {readFileContent}");
+                logger.LogWarning($"File content: {readFileContent}");
+                logger.LogError($"File content: {readFileContent}");
             }
 
             // 업로드
