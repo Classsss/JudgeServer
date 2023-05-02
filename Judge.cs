@@ -2,6 +2,8 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Azure.Storage.Files.Shares;
+using System.Text;
+using Azure.Storage.Files.Shares.Models;
 
 namespace JudgeServer {
     public class Judge {
@@ -41,7 +43,6 @@ namespace JudgeServer {
 
             string connectionString = "DefaultEndpointsProtocol=https;AccountName=judgeserverstorage;AccountKey=g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==;EndpointSuffix=core.windows.net";
             string shareName = "judge";
-            string folderPath = "docker";
 
             // 스토리지 계정과 연결하고 파일 공유 클라이언트를 생성합니다.
             ShareClient shareClient = new ShareClient(connectionString, shareName);
@@ -51,9 +52,38 @@ namespace JudgeServer {
                 shareClient.Create();
             }
 
+            // 파일 읽기
+            string readDirectoryName = "docker/csharp";
+            string readFileName = "Main.csproj";
+
+            // 디렉토리 클라이언트 생성
+            ShareDirectoryClient readDirectoryClient = shareClient.GetDirectoryClient(readDirectoryName);
+
+            // 파일 클라이언트 생성
+            ShareFileClient readFileClient = readDirectoryClient.GetFileClient(readFileName);
+
+            // 파일 다운로드
+            ShareFileDownloadInfo downloadInfo = await readFileClient.DownloadAsync();
+
+            // 다운로드한 파일의 내용 읽기
+            using (StreamReader reader = new StreamReader(downloadInfo.Content)) {
+                string readFileContent = await reader.ReadToEndAsync();
+                Console.WriteLine($"File content: {readFileContent}");
+            }
+
+            // 업로드
+            string uploadFolderPath = "docker";
+            string uploadFileName = "Main.c";
+            string uploadFileContent = code;
+
             // 디렉토리 클라이언트를 생성하고 디렉토리를 생성합니다.
-            ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(folderPath);
-            directoryClient.CreateIfNotExists();
+            ShareDirectoryClient uploadDirectoryClient = shareClient.GetDirectoryClient(uploadFolderPath);
+
+            // 파일 클라이언트 생성 및 파일 업로드
+            ShareFileClient uploadFileClient = uploadDirectoryClient.CreateFile(uploadFileName, uploadFileContent.Length);
+            using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(uploadFileContent))) {
+                await uploadFileClient.UploadAsync(stream);
+            }
 
             /* 채점 수행
             // 채점 요청별로 사용할 유니크한 폴더명
