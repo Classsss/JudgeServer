@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Docker.DotNet;
 using Docker.DotNet.Models;
+using Azure.Storage.Files.Shares;
 
 namespace JudgeServer {
     public class Judge {
@@ -9,6 +10,9 @@ namespace JudgeServer {
 
         // 도커 이미지 이름
         private const string IMAGE_NAME = "leehayoon/judge";
+
+        private const string connectionString = "DefaultEndpointsProtocol=https;AccountName=judgeserverstorage;AccountKey=g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==;EndpointSuffix=core.windows.net";
+        private const string shareName = "judge";
 
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
@@ -31,6 +35,12 @@ namespace JudgeServer {
             double executionTimeLimit;
             // 메모리 사용량(KB) 제한
             long memoryUsageLimit;
+
+            // Azure Storage
+            ShareClient share = new ShareClient(connectionString, shareName);
+
+            // Create the share if it doesn't already exist
+            //await share.CreateIfNotExistsAsync();
 
             // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
             GetJudgeData(in request, out code, out language, out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
@@ -222,7 +232,8 @@ namespace JudgeServer {
         /// <returns>생성된 DockerClient와 volumeMapping을 ValueTuple로 반환</returns>
         private static async Task<ValueTuple<DockerClient?, Dictionary<string, string>?>> InitDockerClientAsync(string imageTag, string folderPath, string folderName) {
             // Docker client 생성
-            DockerClient? dockerClient = new DockerClientConfiguration(new Uri("npipe://./pipe/docker_engine")).CreateClient();
+            var credentials = new AnonymousCredentials();
+            DockerClient? dockerClient = new DockerClientConfiguration(new Uri("npipe://./pipe/docker_engine"), credentials).CreateClient();
 
             // 이미지 다운로드
             await dockerClient.Images.CreateImageAsync(new ImagesCreateParameters {
@@ -245,16 +256,54 @@ namespace JudgeServer {
         /// <param name="folderName">채점 제출 폴더명</param>
         /// <returns>비동기 작업 Task 반환</returns>
         private static async Task RunDockerContainerAsync(DockerClient? dockerClient, Dictionary<string, string>? volumeMapping, string imageTag, string folderName) {
-            // 컨테이너 생성
+
+            // Azure File Share 정보
+            string azureStorageAccountName = "judgeserverstorage";
+            string azureStorageAccountKey = "g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==";
+            string azureFileShareName = "judge";
+            string containerPath = folderName;
+
+            // Azure File Share 볼륨 매핑
+            var hostConfig = new HostConfig {
+                Mounts = new List<Mount> {
+                    new Mount {
+                        Type = "volume",
+                        Source = $"//{azureStorageAccountName}.file.core.windows.net/{azureFileShareName}",
+                        Target = containerPath,
+                        VolumeOptions = new VolumeOptions {
+                            DriverConfig = new Driver {
+                                Name = "azure_file",
+                                Options = new Dictionary<string, string> {
+                                    { "share_name", azureFileShareName },
+                                    { "storage_account_name", azureStorageAccountName },
+                                    { "storage_account_key", azureStorageAccountKey }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
             CreateContainerResponse? createContainerResponse = await dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters {
                 Image = $"{IMAGE_NAME}:{imageTag}",
                 // 환경 변수 설정
                 Env = new List<string> { "DIR_NAME=" + folderName },
                 // 볼륨 설정
-                HostConfig = new HostConfig {
-                    Binds = volumeMapping.Select(kv => $"{kv.Key}:{kv.Value}").ToList(),
-                }
+                HostConfig = hostConfig
             });
+
+            // 컨테이너 생성
+            //CreateContainerResponse? createContainerResponse = await dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters {
+            //    Image = $"{IMAGE_NAME}:{imageTag}",
+            //    // 환경 변수 설정
+            //    Env = new List<string> { "DIR_NAME=" + folderName },
+            //    // 볼륨 설정
+            //    HostConfig = new HostConfig {
+            //        Binds = volumeMapping.Select(kv => $"{kv.Key}:{kv.Value}").ToList(),
+            //    }
+            //});
+
+
 
             // 컨테이너 실행
             await dockerClient.Containers.StartContainerAsync(createContainerResponse.ID, new ContainerStartParameters());
