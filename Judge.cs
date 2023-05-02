@@ -75,7 +75,7 @@ namespace JudgeServer {
             // 다운로드한 파일의 내용 읽기
             using (StreamReader reader = new StreamReader(downloadInfo.Content)) {
                 string readFileContent = await reader.ReadToEndAsync();
-                Console.WriteLine($"File content: {readFileContent}");
+                _logger.LogInformation($"File content: {readFileContent}");
             }
 
             // 업로드
