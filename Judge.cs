@@ -8,12 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace JudgeServer {
     public class Judge {
-        private static readonly ILogger<Judge> _logger;
-
-        static Judge(ILogger<Judge> logger) {
-            _logger = logger;
-        }
-
         // 채점 폴더가 생성될 기본 경로
         private const string SUBMIT_FOLDER_PATH = "docker";
 
@@ -28,7 +22,7 @@ namespace JudgeServer {
         /// </summary>
         /// <param name="request">ClassHub에서 요청한 정보가 담긴 객체</param>
         /// <returns>채점 결과 정보가 담긴 객체</returns>
-        public static async Task<JudgeResult> JudgeCodeAsync(JudgeRequest request) {
+        public static async Task<JudgeResult> JudgeCodeAsync(JudgeRequest request, ILogger logger) {
             // 반환할 채점 정보를 저장하는 객체
             JudgeResult result = new JudgeResult();
 
@@ -75,7 +69,7 @@ namespace JudgeServer {
             // 다운로드한 파일의 내용 읽기
             using (StreamReader reader = new StreamReader(downloadInfo.Content)) {
                 string readFileContent = await reader.ReadToEndAsync();
-                _logger.LogInformation($"File content: {readFileContent}");
+                logger.LogInformation($"File content: {readFileContent}");
             }
 
             // 업로드
