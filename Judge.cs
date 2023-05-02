@@ -36,15 +36,26 @@ namespace JudgeServer {
             // 메모리 사용량(KB) 제한
             long memoryUsageLimit;
 
-            // Azure Storage
-            ShareClient share = new ShareClient(connectionString, shareName);
-
-            // Create the share if it doesn't already exist
-            //await share.CreateIfNotExistsAsync();
-
             // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
             GetJudgeData(in request, out code, out language, out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
 
+            string connectionString = "DefaultEndpointsProtocol=https;AccountName=judgeserverstorage;AccountKey=g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==;EndpointSuffix=core.windows.net";
+            string shareName = "judge";
+            string folderPath = "docker";
+
+            // 스토리지 계정과 연결하고 파일 공유 클라이언트를 생성합니다.
+            ShareClient shareClient = new ShareClient(connectionString, shareName);
+
+            // 파일 공유가 이미 존재하는지 확인하고, 없으면 생성합니다.
+            if (!shareClient.Exists()) {
+                shareClient.Create();
+            }
+
+            // 디렉토리 클라이언트를 생성하고 디렉토리를 생성합니다.
+            ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(folderPath);
+            directoryClient.CreateIfNotExists();
+
+            /* 채점 수행
             // 채점 요청별로 사용할 유니크한 폴더명
             string folderName;
 
@@ -133,6 +144,9 @@ namespace JudgeServer {
 
             // 모든 테스트 케이스를 수행하면 결과를 저장해 JudgeResult 객체 반환
             return GetJudgeResult(in caseCount, ref result, ref avgExecutionTime, ref avgMemoryUsage);
+            */
+
+            return result;
         }
 
         /// <summary>
