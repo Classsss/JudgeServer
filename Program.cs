@@ -1,3 +1,5 @@
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Extensions.Logging;
 
 namespace JudgeServer {
     public class Program {
@@ -10,6 +12,8 @@ namespace JudgeServer {
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            builder.Services.AddApplicationInsightsTelemetry();
 
             var app = builder.Build();
 

@@ -4,9 +4,16 @@ using Docker.DotNet.Models;
 using Azure.Storage.Files.Shares;
 using System.Text;
 using Azure.Storage.Files.Shares.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace JudgeServer {
     public class Judge {
+        private static readonly ILogger<Judge> _logger;
+
+        static Judge(ILogger<Judge> logger) {
+            _logger = logger;
+        }
+
         // 채점 폴더가 생성될 기본 경로
         private const string SUBMIT_FOLDER_PATH = "docker";
 
