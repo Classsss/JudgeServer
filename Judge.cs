@@ -118,17 +118,23 @@ namespace JudgeServer {
             string folderPath, inputFilePath, compileErrorFilePath, runtimeErrorFilePath, resultFilePath, statFilePath;
 
             // 채점 제출 폴더를 생성하고 내부에 생성되는 파일들의 경로를 받아옴
+            logger.LogWarning("CreateSubmitFolder Call");
             CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out resultFilePath, out statFilePath);
+            logger.LogWarning("CreateSubmitFolder Done");
 
             // 코드를 언어에 맞는 형식을 가지는 파일로 저장
+            logger.LogWarning("CreateCodeFile Call");
             string codeFilePath = await CreateCodeFile(folderPath, code, language);
+            logger.LogWarning("CreateCodeFile Done");
 
             // Docker Hub에서의 이미지 태그
             string imageTag = language;
 
             // Docker client 초기화
             // TODO : dockerClient, volumeMapping이 null이 아닐 때 예외처리 필요
+            logger.LogWarning("InitDockerClientAsync Call");
             DockerClient? dockerClient = await InitDockerClientAsync(imageTag, folderPath, folderName);
+            logger.LogWarning("InitDockerClientAsync Done");
 
             // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
             double avgExecutionTime = 0;
@@ -137,10 +143,14 @@ namespace JudgeServer {
             // 케이스 횟수
             int caseCount = outputCases.Count();
 
+            logger.LogWarning("UploadFile Call");
             await UploadFile(inputFilePath, inputCases[0]);
+            logger.LogWarning("UploadFile Done");
 
             // 컨테이너 구동
+            logger.LogWarning("RunDockerContainerAsync Call");
             await RunDockerContainerAsync(dockerClient, imageTag, folderName);
+            logger.LogWarning("RunDockerContainerAsync Done");
 
             //// 테스트 케이스 수행
             //for (int i = 0; i < caseCount; i++) {
