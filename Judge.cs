@@ -5,6 +5,7 @@ using Azure.Storage.Files.Shares;
 using System.Text;
 using Azure.Storage.Files.Shares.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace JudgeServer {
     public class Judge {
@@ -14,8 +15,76 @@ namespace JudgeServer {
         // 도커 이미지 이름
         private const string IMAGE_NAME = "leehayoon/judge";
 
+        // Azure Storage
         private const string connectionString = "DefaultEndpointsProtocol=https;AccountName=judgeserverstorage;AccountKey=g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==;EndpointSuffix=core.windows.net";
         private const string shareName = "judge";
+
+        private static ShareClient shareClient;
+
+        static Judge() {
+            // 스토리지 계정과 연결하고 파일 공유 클라이언트를 생성합니다.
+            shareClient = new ShareClient(connectionString, shareName);
+
+            // 파일 공유가 이미 존재하는지 확인하고, 없으면 생성합니다.
+            if (!shareClient.Exists()) {
+                shareClient.Create();
+            }
+        }
+
+        private static void CreateDirectoryIfNotExists(in string directoryPath) {
+            // 디렉토리 클라이언트를 생성하고 디렉토리를 생성합니다.
+            ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(directoryPath);
+            directoryClient.CreateIfNotExists();
+        }
+
+        private static async Task<string> ReadFile(string directoryPath, string fileName) {
+            // 디렉토리 클라이언트 생성
+            ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(directoryPath);
+
+            // 파일 클라이언트 생성
+            ShareFileClient fileClient = directoryClient.GetFileClient(fileName);
+
+            // 파일 다운로드
+            ShareFileDownloadInfo downloadInfo = await fileClient.DownloadAsync();
+
+            // 다운로드한 파일의 내용 읽기
+            using (StreamReader reader = new StreamReader(downloadInfo.Content)) {
+                string readFileContent = await reader.ReadToEndAsync();
+                return readFileContent; 
+            }
+        }
+
+        private static async Task UploadFile(string filePath, string fileContent) {
+            // 디렉토리 클라이언트를 생성하고 디렉토리를 생성합니다.
+            ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(Path.GetDirectoryName(filePath));
+
+            // 파일 클라이언트 생성 및 파일 업로드
+            ShareFileClient fileClient = directoryClient.CreateFile(Path.GetFileName(filePath), fileContent.Length);
+            using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(fileContent))) {
+                await fileClient.UploadAsync(stream);
+            }
+        }
+
+        private static async Task CopyFile(string sourceFilePath, string destFilePath) {
+            // 복사의 원본 파일의 경로로 부터 DirectoryClient와 FileClient 생성
+            ShareDirectoryClient sourceDirectoryClient = shareClient.GetDirectoryClient(Path.GetDirectoryName(sourceFilePath));
+            ShareFileClient sourceFileClient = sourceDirectoryClient.GetFileClient(Path.GetFileName(sourceFilePath));
+
+            // 복사된 파일이 저장될 경로로 부터 DirectoryClient와 FileClient 생성
+            ShareDirectoryClient destDirectoryClient = shareClient.GetDirectoryClient(Path.GetDirectoryName(destFilePath));
+            ShareFileClient destFileClient = destDirectoryClient.GetFileClient(Path.GetFileName(destFilePath));
+
+            // 복사할 파일의 URL 가져오기
+            Uri sourceFileUri = sourceFileClient.Uri;
+
+            // 파일 복사
+            await destFileClient.StartCopyAsync(sourceFileUri);
+        }
+
+        private static async Task DeleteDirectoryIfExists(string directoryPath) {
+            ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(directoryPath);
+            await directoryClient.DeleteIfExistsAsync();
+        }
 
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
@@ -42,53 +111,6 @@ namespace JudgeServer {
             // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
             GetJudgeData(in request, out code, out language, out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
 
-            string connectionString = "DefaultEndpointsProtocol=https;AccountName=judgeserverstorage;AccountKey=g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==;EndpointSuffix=core.windows.net";
-            string shareName = "judge";
-
-            // 스토리지 계정과 연결하고 파일 공유 클라이언트를 생성합니다.
-            ShareClient shareClient = new ShareClient(connectionString, shareName);
-
-            // 파일 공유가 이미 존재하는지 확인하고, 없으면 생성합니다.
-            if (!shareClient.Exists()) {
-                shareClient.Create();
-            }
-
-            // 파일 읽기
-            string readDirectoryName = "docker/csharp";
-            string readFileName = "Main.csproj";
-
-            // 디렉토리 클라이언트 생성
-            ShareDirectoryClient readDirectoryClient = shareClient.GetDirectoryClient(readDirectoryName);
-
-            // 파일 클라이언트 생성
-            ShareFileClient readFileClient = readDirectoryClient.GetFileClient(readFileName);
-
-            // 파일 다운로드
-            ShareFileDownloadInfo downloadInfo = await readFileClient.DownloadAsync();
-
-            // 다운로드한 파일의 내용 읽기
-            using (StreamReader reader = new StreamReader(downloadInfo.Content)) {
-                string readFileContent = await reader.ReadToEndAsync();
-                logger.LogInformation($"File content: {readFileContent}");
-                logger.LogWarning($"File content: {readFileContent}");
-                logger.LogError($"File content: {readFileContent}");
-            }
-
-            // 업로드
-            string uploadFolderPath = "docker";
-            string uploadFileName = "Main.c";
-            string uploadFileContent = code;
-
-            // 디렉토리 클라이언트를 생성하고 디렉토리를 생성합니다.
-            ShareDirectoryClient uploadDirectoryClient = shareClient.GetDirectoryClient(uploadFolderPath);
-
-            // 파일 클라이언트 생성 및 파일 업로드
-            ShareFileClient uploadFileClient = uploadDirectoryClient.CreateFile(uploadFileName, uploadFileContent.Length);
-            using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(uploadFileContent))) {
-                await uploadFileClient.UploadAsync(stream);
-            }
-
-            /* 채점 수행
             // 채점 요청별로 사용할 유니크한 폴더명
             string folderName;
 
@@ -99,17 +121,14 @@ namespace JudgeServer {
             CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out resultFilePath, out statFilePath);
 
             // 코드를 언어에 맞는 형식을 가지는 파일로 저장
-            string codeFilePath;
-            CreateCodeFile(in folderPath, in code, in language, out codeFilePath);
+            string codeFilePath = await CreateCodeFile(folderPath, code, language);
 
             // Docker Hub에서의 이미지 태그
             string imageTag = language;
 
             // Docker client 초기화
             // TODO : dockerClient, volumeMapping이 null이 아닐 때 예외처리 필요
-            var dockerTuple = await InitDockerClientAsync(imageTag, folderPath, folderName);
-            DockerClient? dockerClient = dockerTuple.Item1;
-            Dictionary<string, string>? volumeMapping = dockerTuple.Item2;
+            DockerClient? dockerClient = await InitDockerClientAsync(imageTag, folderPath, folderName);
 
             // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
             double avgExecutionTime = 0;
@@ -118,66 +137,70 @@ namespace JudgeServer {
             // 케이스 횟수
             int caseCount = outputCases.Count();
 
-            // 테스트 케이스 수행
-            for (int i = 0; i < caseCount; i++) {
-                // 입력 케이스를 파일로 저장
-                File.WriteAllText(inputFilePath, inputCases[i]);
+            await UploadFile(inputFilePath, inputCases[0]);
 
-                // 컨테이너 구동
-                await RunDockerContainerAsync(dockerClient, volumeMapping, imageTag, folderName);
+            // 컨테이너 구동
+            await RunDockerContainerAsync(dockerClient, imageTag, folderName);
 
-                // 컴파일 에러인지 체크
-                if (IsOccuredCompileError(in compileErrorFilePath, in folderName, in language, ref result)) {
-                    break;
-                }
+            //// 테스트 케이스 수행
+            //for (int i = 0; i < caseCount; i++) {
+            //    // 입력 케이스를 파일로 저장
+            //    await UploadFile(inputFilePath, inputCases[i]);
 
-                // 런타임 에러가 발생했는지 체크
-                if (IsOccuredRuntimeError(in runtimeErrorFilePath, in folderName, in language, ref result)) {
-                    break;
-                }
+            //    // 컨테이너 구동
+            //    await RunDockerContainerAsync(dockerClient, imageTag, folderName);
 
-                // 실행 시간과 메모리 사용량
-                double executionTime;
-                long memoryUsage;
+            //    // 컴파일 에러인지 체크
+            //    if (IsOccuredCompileError(in compileErrorFilePath, in folderName, in language, ref result)) {
+            //        break;
+            //    }
 
-                // 실행 시간, 메모리 사용량 측정 값을 받아옴
-                GetStats(in statFilePath, out executionTime, out memoryUsage);
-                Console.WriteLine($"limit : {executionTimeLimit} / acutal : {executionTime}");
+            //    // 런타임 에러가 발생했는지 체크
+            //    if (IsOccuredRuntimeError(in runtimeErrorFilePath, in folderName, in language, ref result)) {
+            //        break;
+            //    }
 
-                // 시간 초과가 발생했는지 체크
-                if (IsExceededTimeLimit(in executionTime, in executionTimeLimit, ref result)) {
-                    break;
-                }
+            //    // 실행 시간과 메모리 사용량
+            //    double executionTime;
+            //    long memoryUsage;
 
-                // 메모리 초과가 발생했는지 체크
-                if (IsExceededMemoryLimit(in memoryUsage, in memoryUsageLimit, ref result)) {
-                    break;
-                }
+            //    // 실행 시간, 메모리 사용량 측정 값을 받아옴
+            //    GetStats(in statFilePath, out executionTime, out memoryUsage);
+            //    Console.WriteLine($"limit : {executionTimeLimit} / acutal : {executionTime}");
 
-                // 평균 실행 시간 및 메모리 사용량 계산
-                avgExecutionTime += executionTime;
-                avgMemoryUsage += memoryUsage;
+            //    // 시간 초과가 발생했는지 체크
+            //    if (IsExceededTimeLimit(in executionTime, in executionTimeLimit, ref result)) {
+            //        break;
+            //    }
 
-                // 현재 진행 중인 테스트 케이스의 출력 케이스
-                string outputCase = outputCases[i];
+            //    // 메모리 초과가 발생했는지 체크
+            //    if (IsExceededMemoryLimit(in memoryUsage, in memoryUsageLimit, ref result)) {
+            //        break;
+            //    }
 
-                // 실행 결과와 출력 케이스 비교
-                if (!JudgeTestCase(in outputCase, in resultFilePath, ref result)) {
-                    break;
-                }
+            //    // 평균 실행 시간 및 메모리 사용량 계산
+            //    avgExecutionTime += executionTime;
+            //    avgMemoryUsage += memoryUsage;
 
-                Console.WriteLine($"{i + 1}번째 케이스 통과");
+            //    // 현재 진행 중인 테스트 케이스의 출력 케이스
+            //    string outputCase = outputCases[i];
 
-                // 테스트 케이스에서 사용하는 파일 초기화
-                InitFile(in inputFilePath, in resultFilePath);
-            }
+            //    // 실행 결과와 출력 케이스 비교
+            //    if (!JudgeTestCase(in outputCase, in resultFilePath, ref result)) {
+            //        break;
+            //    }
 
-            // 채점 제출 폴더 삭제
-            DeleteSubmitFolder(in folderPath);
+            //    Console.WriteLine($"{i + 1}번째 케이스 통과");
 
-            // 모든 테스트 케이스를 수행하면 결과를 저장해 JudgeResult 객체 반환
-            return GetJudgeResult(in caseCount, ref result, ref avgExecutionTime, ref avgMemoryUsage);
-            */
+            //    // 테스트 케이스에서 사용하는 파일 초기화
+            //    InitFile(in inputFilePath, in resultFilePath);
+            //}
+
+            //// 채점 제출 폴더 삭제
+            //DeleteSubmitFolder(in folderPath);
+
+            //// 모든 테스트 케이스를 수행하면 결과를 저장해 JudgeResult 객체 반환
+            //return GetJudgeResult(in caseCount, ref result, ref avgExecutionTime, ref avgMemoryUsage);
 
             return result;
         }
@@ -217,13 +240,8 @@ namespace JudgeServer {
             folderName = Guid.NewGuid().ToString();
 
             // 채점 제출 폴더 생성
-            folderPath = Path.Combine(Directory.GetCurrentDirectory(), SUBMIT_FOLDER_PATH, language, folderName);
-
-            // 폴더가 존재하지 않는 경우에만 폴더를 생성합니다.
-            if (!Directory.Exists(folderPath)) {
-                Directory.CreateDirectory(folderPath);
-                Console.WriteLine($"폴더가 생성되었습니다: {folderPath}");
-            }
+            folderPath = Path.Combine(SUBMIT_FOLDER_PATH, language, folderName);
+            CreateDirectoryIfNotExists(in folderPath);
 
             // 입력 케이스가 저장되는 경로
             inputFilePath = Path.Combine(folderPath, "input.txt");
@@ -248,7 +266,9 @@ namespace JudgeServer {
         /// <param name="code">코드</param>
         /// <param name="language">코드의 언어</param>
         /// <param name="codeFilePath">코드 파일의 경로</param>
-        private static void CreateCodeFile(in string folderPath, in string code, in string language, out string codeFilePath) {
+        private static async Task<string> CreateCodeFile(string folderPath, string code, string language) {
+            string codeFilePath;
+
             // 파이썬의 경우 언어 이름과 파일 형식이 다름
             if (language == "python") {
                 codeFilePath = Path.Combine(folderPath, "Main.py");
@@ -261,13 +281,16 @@ namespace JudgeServer {
                 string parentDirectory = Directory.GetParent(folderPath).FullName;
                 string sourceProjFilePath = Path.Combine(parentDirectory, "Main.csproj");
                 string destProjFilePath = Path.Combine(folderPath, "Main.csproj");
-                File.Copy(sourceProjFilePath, destProjFilePath, true);
+
+                await CopyFile(sourceProjFilePath, destProjFilePath);
             } 
             // 나머지 경우 언어 이름과 파일 형식이 동일함
             else {
                 codeFilePath = Path.Combine(folderPath, $"Main.{language}");
             }
-            File.WriteAllText(codeFilePath, code);
+            await UploadFile(codeFilePath, code);
+
+            return codeFilePath;
         }
 
         /// <summary>
@@ -277,7 +300,7 @@ namespace JudgeServer {
         /// <param name="folderPath">채점 제출 폴더 경로</param>
         /// <param name="folderName">채점 제출 폴더 명</param>
         /// <returns>생성된 DockerClient와 volumeMapping을 ValueTuple로 반환</returns>
-        private static async Task<ValueTuple<DockerClient?, Dictionary<string, string>?>> InitDockerClientAsync(string imageTag, string folderPath, string folderName) {
+        private static async Task<DockerClient?> InitDockerClientAsync(string imageTag, string folderPath, string folderName) {
             // Docker client 생성
             var credentials = new AnonymousCredentials();
             DockerClient? dockerClient = new DockerClientConfiguration(new Uri("npipe://./pipe/docker_engine"), credentials).CreateClient();
@@ -287,11 +310,8 @@ namespace JudgeServer {
                 FromImage = IMAGE_NAME, Tag = imageTag
             }, new AuthConfig(), new Progress<JSONMessage>());
 
-            // 볼륨 맵핑 - 로컬 유저 폴더 : 컨테이너 내부 유저 폴더
-            Dictionary<string, string>? volumeMapping = new Dictionary<string, string> { { folderPath, $"/app/{folderName}" } };
-
             // ValueTuple로 반환
-            return (dockerClient, volumeMapping);
+            return dockerClient;
         }
 
         /// <summary>
@@ -302,13 +322,13 @@ namespace JudgeServer {
         /// <param name="imageTag">도커 이미지 태그</param>
         /// <param name="folderName">채점 제출 폴더명</param>
         /// <returns>비동기 작업 Task 반환</returns>
-        private static async Task RunDockerContainerAsync(DockerClient? dockerClient, Dictionary<string, string>? volumeMapping, string imageTag, string folderName) {
+        private static async Task RunDockerContainerAsync(DockerClient? dockerClient, string imageTag, string folderName) {
 
             // Azure File Share 정보
             string azureStorageAccountName = "judgeserverstorage";
             string azureStorageAccountKey = "g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==";
             string azureFileShareName = "judge";
-            string containerPath = folderName;
+            string containerPath = Path.Combine("/app", folderName);
 
             // Azure File Share 볼륨 매핑
             var hostConfig = new HostConfig {
@@ -349,8 +369,6 @@ namespace JudgeServer {
             //        Binds = volumeMapping.Select(kv => $"{kv.Key}:{kv.Value}").ToList(),
             //    }
             //});
-
-
 
             // 컨테이너 실행
             await dockerClient.Containers.StartContainerAsync(createContainerResponse.ID, new ContainerStartParameters());

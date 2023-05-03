@@ -17,9 +17,7 @@ namespace JudgeServer.Controllers {
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] JudgeRequest request) {
             Console.WriteLine("Post 받음");
-            _logger.LogInformation("Post 받음");
             _logger.LogWarning("Post 받음");
-            _logger.LogError("Post 받음");
 
             // 코드를 채점한 결과를 받는다.
             JudgeResult result = await Judge.JudgeCodeAsync(request, _logger);
