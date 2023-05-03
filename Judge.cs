@@ -95,8 +95,9 @@ namespace JudgeServer
 
             do
             {
-                //현재 채점중인 번호 전달
-                await connection.InvokeAsync("SendCurrentIndex", i+1);
+                //현재 채점중인 번호 및 connectionId전달
+                Tuple<int, string> realTimeSendData = new(i+1,request.snederConnectionId);
+                await connection.InvokeAsync("SendCurrentIndex", realTimeSendData);
 
                 
                 // 입력 케이스를 파일로 저장
@@ -375,8 +376,8 @@ namespace JudgeServer
             await dockerClient.Containers.WaitContainerAsync(createContainerResponse.ID);
 
             // 컨테이너 종료 및 삭제
-            // await dockerClient.Containers.StopContainerAsync(createContainerResponse.ID, new ContainerStopParameters());
-            // await dockerClient.Containers.RemoveContainerAsync(createContainerResponse.ID, new ContainerRemoveParameters());
+             await dockerClient.Containers.StopContainerAsync(createContainerResponse.ID, new ContainerStopParameters());
+             await dockerClient.Containers.RemoveContainerAsync(createContainerResponse.ID, new ContainerRemoveParameters());
         }
 
         /// <summary>
