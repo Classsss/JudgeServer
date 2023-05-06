@@ -4,8 +4,11 @@ using Docker.DotNet.Models;
 using Azure.Storage.Files.Shares;
 using System.Text;
 using Azure.Storage.Files.Shares.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using Azure.Storage.Sas;
+using Newtonsoft.Json;
+using System.Net.Http.Headers;
+using Azure.Identity;
+using Microsoft.Identity.Client;
 
 namespace JudgeServer {
     public class Judge {
@@ -86,6 +89,142 @@ namespace JudgeServer {
             await directoryClient.DeleteIfExistsAsync();
         }
 
+        // Azure Container Instance
+        public class VolumeMapping {
+            public string Name { get; set; }
+            public string MountPath { get; set; }
+            public AzureFileVolume AzureFile { get; set; }
+        }
+
+        public class AzureFileVolume {
+            public string StorageAccountName { get; set; }
+            public string StorageAccountKey { get; set; }
+            public string ShareName { get; set; }
+        }
+
+        private static async Task ACI(string folderPath) {
+            // Azure subscription, resource group, container group, and storage account details
+            string subscriptionId = "6c37ecfc-0676-481f-85f3-521888fef710";
+            string resourceGroupName = "TestJudgeServer";
+            string containerGroupName = "judgecontainer";
+            string storageAccountName = "storagejudgeserver";
+            string fileShareName = "judge";
+
+            // Docker image and container details
+            string imageName = "leehayoon/judge:c";
+            string containerName = "judgec";
+
+            // Get the storage account key
+            var storageAccountKey = await GetStorageAccountKey(subscriptionId, resourceGroupName, storageAccountName);
+
+            // Create Azure File Share volume mapping
+            var volumeMapping = new VolumeMapping {
+                Name = fileShareName,
+                MountPath = $"/docker/c/{folderPath}",
+                AzureFile = new AzureFileVolume {
+                    StorageAccountName = storageAccountName,
+                    StorageAccountKey = storageAccountKey,
+                    ShareName = fileShareName
+                }
+            };
+
+            // Create and start the container instance
+            await CreateAndStartContainerInstance(subscriptionId, resourceGroupName, containerGroupName, imageName, containerName, volumeMapping);
+        }
+
+        private static async Task<string> GetStorageAccountKey(string subscriptionId, string resourceGroupName, string storageAccountName) {
+            // Set up the storage account connection string
+            string connectionString = "DefaultEndpointsProtocol=https;AccountName=storagejudgeserver;AccountKey=WaFwRbv0D902yF2OwJVZRU3bpD7qAXKyATamJmXZlnsFduhUmWbVr645JdtW5q58h+/6ldbJAoLS+AStr451YA==;EndpointSuffix=core.windows.net";
+
+
+            // Create the File Share service client
+            ShareServiceClient shareServiceClient = new ShareServiceClient(connectionString);
+
+            // Get the storage account key
+            AccountSasBuilder sasBuilder = new AccountSasBuilder {
+                Services = AccountSasServices.Files,
+                ResourceTypes = AccountSasResourceTypes.Service,
+                ExpiresOn = DateTimeOffset.UtcNow.AddHours(1),
+                StartsOn = DateTimeOffset.UtcNow.AddMinutes(-5),
+                Protocol = SasProtocol.Https
+            };
+
+            sasBuilder.SetPermissions(AccountSasPermissions.Read | AccountSasPermissions.Write | AccountSasPermissions.List);
+            string storageAccountKey = shareServiceClient.GenerateAccountSasUri(sasBuilder).OriginalString;
+
+            return storageAccountKey;
+        }
+
+        private static async Task<string> GetAccessTokenAsync() {
+            string clientId = "52b34da7-c76d-4661-9404-1a33642481b5";
+            string clientSecret = "d4477e1b-37c8-4a49-98f9-243fdd6b8133";
+            string tenantId = "946167a9-0c6b-455b-91ac-f855158ad79a";
+            string authority = $"https://login.microsoftonline.com/{tenantId}";
+            string resource = "https://management.azure.com/";
+
+            IConfidentialClientApplication app = ConfidentialClientApplicationBuilder
+                .Create(clientId)
+                .WithClientSecret(clientSecret)
+                .WithAuthority(new Uri(authority))
+                .Build();
+
+            // 엑세스 토큰 요청
+            AuthenticationResult result = await app.AcquireTokenForClient(new[] { resource + ".default" }).ExecuteAsync();
+
+            return result.AccessToken;
+        }
+
+        private static async Task CreateAndStartContainerInstance(string subscriptionId, string resourceGroupName, string containerGroupName, string imageName, string containerName, VolumeMapping volumeMapping) {
+
+            string baseUrl = $"https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerInstance/containerGroups/{containerGroupName}?api-version=2018-10-01";
+
+            using (var httpClient = new HttpClient()) {
+                // Set up the authentication header
+                var token = await GetAccessTokenAsync();
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                // Create the request body
+                var requestBody = new {
+                    location = "Korea Central",
+                    properties = new {
+                        osType = "Linux",
+                        containers = new[] {
+                            new {
+                                name = containerName,
+                                properties = new {
+                                    image = imageName,
+                                    volumeMounts = new[] {
+                                        new {
+                                            name = volumeMapping.Name,
+                                            mountPath = volumeMapping.MountPath
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        volumes = new[] {
+                            new {
+                                name = volumeMapping.Name,
+                                azureFile = new {
+                                    shareName = volumeMapping.AzureFile.ShareName,
+                                    storageAccountName = volumeMapping.AzureFile.StorageAccountName,
+                                    storageAccountKey = volumeMapping.AzureFile.StorageAccountKey
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // Serialize the request body
+                string jsonRequestBody = JsonConvert.SerializeObject(requestBody);
+
+                // Send the request
+                using (var response = await httpClient.PutAsync(baseUrl, new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"))) {
+                    response.EnsureSuccessStatusCode();
+                }
+            }
+        }
+
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
         /// </summary>
@@ -149,7 +288,8 @@ namespace JudgeServer {
 
             // 컨테이너 구동
             logger.LogWarning("RunDockerContainerAsync Call");
-            await RunDockerContainerAsync(dockerClient, imageTag, folderName);
+            //await RunDockerContainerAsync(dockerClient, imageTag, folderName);
+            await ACI(folderPath);
             logger.LogWarning("RunDockerContainerAsync Done");
 
             //// 테스트 케이스 수행
