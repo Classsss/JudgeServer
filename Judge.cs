@@ -4,11 +4,12 @@ using Docker.DotNet.Models;
 using Azure.Storage.Files.Shares;
 using System.Text;
 using Azure.Storage.Files.Shares.Models;
-using Azure.Storage.Sas;
-using Newtonsoft.Json;
-using System.Net.Http.Headers;
+using Azure.ResourceManager.ContainerInstance;
 using Azure.Identity;
-using Microsoft.Identity.Client;
+using Azure.ResourceManager;
+using Microsoft.Azure.Management.ContainerInstance.Fluent;
+using Azure.ResourceManager.Resources;
+using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
 
 namespace JudgeServer {
     public class Judge {
@@ -89,6 +90,7 @@ namespace JudgeServer {
             await directoryClient.DeleteIfExistsAsync();
         }
 
+        /*
         // Azure Container Instance
         public class VolumeMapping {
             public string Name { get; set; }
@@ -224,6 +226,75 @@ namespace JudgeServer {
                 }
             }
         }
+        */
+
+
+        //public class ACIManager {
+        //    private string _subscriptionId;
+        //    private string _resourceGroupName;
+        //    private string _location;
+
+        //    public ACIManager(string subscriptionId, string resourceGroupName, string location) {
+        //        _subscriptionId = subscriptionId;
+        //        _resourceGroupName = resourceGroupName;
+        //        _location = location;
+        //    }
+
+        //    public async Task CreateAndStartContainerInstanceAsync(string containerGroupName, string imageName, string containerName, string fileShareAccountName, string fileShareAccountKey, string fileShareName) {
+        //        var credentials = new DefaultAzureCredential();
+        //        var containerInstanceClient = new ContainerInstanceManagementClient(_subscriptionId, credentials);
+
+        //        var containerGroup = new ContainerGroup(_location) {
+        //            Containers = new[]
+        //            {
+        //            new Container
+        //            {
+        //                Name = containerName,
+        //                Image = imageName,
+        //                Resources = new ResourceRequirements
+        //                {
+        //                    Requests = new ResourceRequests
+        //                    {
+        //                        Cpu = 1,
+        //                        MemoryInGB = 1.5
+        //                    }
+        //                },
+        //                VolumeMounts = new[]
+        //                {
+        //                    new VolumeMount
+        //                    {
+        //                        Name = "azurefileshare",
+        //                        MountPath = "/mnt/azurefileshare"
+        //                    }
+        //                }
+        //            }
+        //        },
+        //            Volumes = new[]
+        //            {
+        //            new Volume
+        //            {
+        //                Name = "azurefileshare",
+        //                AzureFile = new AzureFileVolume
+        //                {
+        //                    ShareName = fileShareName,
+        //                    ReadOnlyProperty = false,
+        //                    StorageAccountName = fileShareAccountName,
+        //                    StorageAccountKey = fileShareAccountKey
+        //                }
+        //            }
+        //        },
+        //            OsType = OperatingSystemTypes.Linux
+        //        };
+
+        //        await containerInstanceClient.ContainerGroups.CreateOrUpdateAsync(_resourceGroupName, containerGroupName, containerGroup);
+        //    }
+
+        //    public async Task DeleteContainerInstanceAsync(string containerGroupName) {
+        //        var credentials = new DefaultAzureCredential();
+        //        var containerInstanceClient = new ContainerInstanceManagementClient(_subscriptionId, credentials);
+        //        await containerInstanceClient.ContainerGroups.DeleteAsync(_resourceGroupName, containerGroupName);
+        //    }
+        //}
 
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
@@ -234,63 +305,97 @@ namespace JudgeServer {
             // 반환할 채점 정보를 저장하는 객체
             JudgeResult result = new JudgeResult();
 
-            // 전달받은 코드
-            string code;
-            // 코드의 언어
-            string language;
-            // 입력 테스트 케이스
-            List<string> inputCases;
-            // 출력 테스트 케이스
-            List<string> outputCases;
-            // 실행 시간(ms) 제한
-            double executionTimeLimit;
-            // 메모리 사용량(KB) 제한
-            long memoryUsageLimit;
+            DockerClient? client = await InitDockerClientAsync("c", "", "");
+            await RunDockerContainerAsync(client, "", "");
 
-            // 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
-            GetJudgeData(in request, out code, out language, out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
+            /*
+            //// 전달받은 코드
+            //string code;
+            //// 코드의 언어
+            //string language;
+            //// 입력 테스트 케이스
+            //List<string> inputCases;
+            //// 출력 테스트 케이스
+            //List<string> outputCases;
+            //// 실행 시간(ms) 제한
+            //double executionTimeLimit;
+            //// 메모리 사용량(KB) 제한
+            //long memoryUsageLimit;
 
-            // 채점 요청별로 사용할 유니크한 폴더명
-            string folderName;
+            //// 채점 DB에서 입출력 케이스, 실행 시간 제한, 메모리 사용량 제한을 받아옴
+            //GetJudgeData(in request, out code, out language, out inputCases, out outputCases, out executionTimeLimit, out memoryUsageLimit);
 
-            // 유저 제출 폴더, 입력케이스, 컴파일 에러 메시지, 런타임 에러 메시지, 실행 결과, 실행 시간과 메모리 사용량이 저장되는 경로들
-            string folderPath, inputFilePath, compileErrorFilePath, runtimeErrorFilePath, resultFilePath, statFilePath;
+            //// 채점 요청별로 사용할 유니크한 폴더명
+            //string folderName;
 
-            // 채점 제출 폴더를 생성하고 내부에 생성되는 파일들의 경로를 받아옴
-            logger.LogWarning("CreateSubmitFolder Call");
-            CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out resultFilePath, out statFilePath);
-            logger.LogWarning("CreateSubmitFolder Done");
+            //// 유저 제출 폴더, 입력케이스, 컴파일 에러 메시지, 런타임 에러 메시지, 실행 결과, 실행 시간과 메모리 사용량이 저장되는 경로들
+            //string folderPath, inputFilePath, compileErrorFilePath, runtimeErrorFilePath, resultFilePath, statFilePath;
 
-            // 코드를 언어에 맞는 형식을 가지는 파일로 저장
-            logger.LogWarning("CreateCodeFile Call");
-            string codeFilePath = await CreateCodeFile(folderPath, code, language);
-            logger.LogWarning("CreateCodeFile Done");
+            //// 채점 제출 폴더를 생성하고 내부에 생성되는 파일들의 경로를 받아옴
+            //logger.LogWarning("CreateSubmitFolder Call");
+            //CreateSubmitFolder(in language, out folderName, out folderPath, out inputFilePath, out compileErrorFilePath, out runtimeErrorFilePath, out resultFilePath, out statFilePath);
+            //logger.LogWarning("CreateSubmitFolder Done");
 
-            // Docker Hub에서의 이미지 태그
-            string imageTag = language;
+            //// 코드를 언어에 맞는 형식을 가지는 파일로 저장
+            //logger.LogWarning("CreateCodeFile Call");
+            //string codeFilePath = await CreateCodeFile(folderPath, code, language);
+            //logger.LogWarning("CreateCodeFile Done");
 
-            // Docker client 초기화
-            // TODO : dockerClient, volumeMapping이 null이 아닐 때 예외처리 필요
-            logger.LogWarning("InitDockerClientAsync Call");
-            DockerClient? dockerClient = await InitDockerClientAsync(imageTag, folderPath, folderName);
-            logger.LogWarning("InitDockerClientAsync Done");
+            //// Docker Hub에서의 이미지 태그
+            //string imageTag = language;
 
-            // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
-            double avgExecutionTime = 0;
-            long avgMemoryUsage = 0;
+            //// Docker client 초기화
+            //// TODO : dockerClient, volumeMapping이 null이 아닐 때 예외처리 필요
+            //logger.LogWarning("InitDockerClientAsync Call");
+            //DockerClient? dockerClient = await InitDockerClientAsync(imageTag, folderPath, folderName);
+            //logger.LogWarning("InitDockerClientAsync Done");
 
-            // 케이스 횟수
-            int caseCount = outputCases.Count();
+            //// 테스트 케이스들의 평균 실행 시간과 메모리 사용량
+            //double avgExecutionTime = 0;
+            //long avgMemoryUsage = 0;
 
-            logger.LogWarning("UploadFile Call");
-            await UploadFile(inputFilePath, inputCases[0]);
-            logger.LogWarning("UploadFile Done");
+            //// 케이스 횟수
+            //int caseCount = outputCases.Count();
 
-            // 컨테이너 구동
-            logger.LogWarning("RunDockerContainerAsync Call");
-            //await RunDockerContainerAsync(dockerClient, imageTag, folderName);
-            await ACI(folderPath);
-            logger.LogWarning("RunDockerContainerAsync Done");
+            //logger.LogWarning("UploadFile Call");
+            //await UploadFile(inputFilePath, inputCases[0]);
+            //logger.LogWarning("UploadFile Done");
+
+
+            ////string subscriptionId = "<your-subscription-id>";
+            ////string resourceGroupName = "<your-resource-group-name>";
+            ////string location = "<your-location>";
+            ////string containerGroupName = "<your-container-group-name>";
+            ////string imageName = "<your-docker-image>";
+            ////string containerName = "<your-container-name>";
+            ////string fileShareAccountName = "<your-file-share-account-name>";
+            ////string fileShareAccountKey = "<your-file-share-account-key>";
+            ////string fileShareName = "<your-file-share-name>";
+
+            ////var aciManager = new ACIManager(subscriptionId, resourceGroupName, location);
+
+            ////// Create and start the container instance with Azure File Share volume mapping
+            ////await aciManager.CreateAndStartContainerInstanceAsync(containerGroupName, imageName, containerName, fileShareAccountName, fileShareAccountKey, fileShareName);
+
+            ////// ... Perform your tasks with the container instance ...
+
+            ////// Delete the container instance when you are done
+            ////await aciManager.DeleteContainerInstanceAsync(containerGroupName);
+
+            ////// First we construct our client
+            ////ArmClient client = new ArmClient(new DefaultAzureCredential());
+
+            ////// Next we get a resource group object
+            ////// ResourceGroupResource is a [Resource] object from above
+            ////SubscriptionResource subscription = await client.GetDefaultSubscriptionAsync();
+            ////ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
+            ////ResourceGroupResource resourceGroup = await resourceGroups.GetAsync("myRgName");
+
+            //// 컨테이너 구동
+            //logger.LogWarning("RunDockerContainerAsync Call");
+            ////await RunDockerContainerAsync(dockerClient, imageTag, folderName);
+            ////await ACI(folderPath);
+            //logger.LogWarning("RunDockerContainerAsync Done");
 
             //// 테스트 케이스 수행
             //for (int i = 0; i < caseCount; i++) {
@@ -351,6 +456,7 @@ namespace JudgeServer {
 
             //// 모든 테스트 케이스를 수행하면 결과를 저장해 JudgeResult 객체 반환
             //return GetJudgeResult(in caseCount, ref result, ref avgExecutionTime, ref avgMemoryUsage);
+            */
 
             return result;
         }
@@ -457,7 +563,7 @@ namespace JudgeServer {
 
             // 이미지 다운로드
             await dockerClient.Images.CreateImageAsync(new ImagesCreateParameters {
-                FromImage = IMAGE_NAME, Tag = imageTag
+                FromImage = "hello-world", Tag = "latest"
             }, new AuthConfig(), new Progress<JSONMessage>());
 
             // ValueTuple로 반환
@@ -474,40 +580,40 @@ namespace JudgeServer {
         /// <returns>비동기 작업 Task 반환</returns>
         private static async Task RunDockerContainerAsync(DockerClient? dockerClient, string imageTag, string folderName) {
 
-            // Azure File Share 정보
-            string azureStorageAccountName = "judgeserverstorage";
-            string azureStorageAccountKey = "g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==";
-            string azureFileShareName = "judge";
-            string containerPath = Path.Combine("/app", folderName);
+            //// Azure File Share 정보
+            //string azureStorageAccountName = "judgeserverstorage";
+            //string azureStorageAccountKey = "g3U8N+1P6ScUvS1+woCbLQw+4DJYCT4G26cDb4k4sCBUXt/1Fx+LVwdlg6qlraT0RscFtrguV0d8+AStP1JW5w==";
+            //string azureFileShareName = "judge";
+            //string containerPath = Path.Combine("/app", folderName);
 
-            // Azure File Share 볼륨 매핑
-            var hostConfig = new HostConfig {
-                Mounts = new List<Mount> {
-                    new Mount {
-                        Type = "volume",
-                        Source = $"//{azureStorageAccountName}.file.core.windows.net/{azureFileShareName}",
-                        Target = containerPath,
-                        VolumeOptions = new VolumeOptions {
-                            DriverConfig = new Driver {
-                                Name = "azure_file",
-                                Options = new Dictionary<string, string> {
-                                    { "share_name", azureFileShareName },
-                                    { "storage_account_name", azureStorageAccountName },
-                                    { "storage_account_key", azureStorageAccountKey }
-                                }
-                            }
-                        }
-                    }
-                }
-            };
+            //// Azure File Share 볼륨 매핑
+            //var hostConfig = new HostConfig {
+            //    Mounts = new List<Mount> {
+            //        new Mount {
+            //            Type = "volume",
+            //            Source = $"//{azureStorageAccountName}.file.core.windows.net/{azureFileShareName}",
+            //            Target = containerPath,
+            //            VolumeOptions = new VolumeOptions {
+            //                DriverConfig = new Driver {
+            //                    Name = "azure_file",
+            //                    Options = new Dictionary<string, string> {
+            //                        { "share_name", azureFileShareName },
+            //                        { "storage_account_name", azureStorageAccountName },
+            //                        { "storage_account_key", azureStorageAccountKey }
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //};
 
-            CreateContainerResponse? createContainerResponse = await dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters {
-                Image = $"{IMAGE_NAME}:{imageTag}",
-                // 환경 변수 설정
-                Env = new List<string> { "DIR_NAME=" + folderName },
-                // 볼륨 설정
-                HostConfig = hostConfig
-            });
+            //CreateContainerResponse? createContainerResponse = await dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters {
+            //    Image = $"{IMAGE_NAME}:{imageTag}",
+            //    // 환경 변수 설정
+            //    Env = new List<string> { "DIR_NAME=" + folderName },
+            //    // 볼륨 설정
+            //    HostConfig = hostConfig
+            //});
 
             // 컨테이너 생성
             //CreateContainerResponse? createContainerResponse = await dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters {
@@ -519,6 +625,15 @@ namespace JudgeServer {
             //        Binds = volumeMapping.Select(kv => $"{kv.Key}:{kv.Value}").ToList(),
             //    }
             //});
+
+            // 컨테이너 생성
+            CreateContainerResponse? createContainerResponse = await dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters {
+                Image = $"hello-world:latest",
+                // 환경 변수 설정
+                //Env = new List<string> { "DIR_NAME=" + folderName },
+                // 볼륨 설정
+                HostConfig = new HostConfig {}
+            });
 
             // 컨테이너 실행
             await dockerClient.Containers.StartContainerAsync(createContainerResponse.ID, new ContainerStartParameters());
