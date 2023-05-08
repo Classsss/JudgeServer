@@ -88,7 +88,7 @@ namespace JudgeServer
 
             //실시간으로 클라이언트에 채점 진행현황 전달
             var connection = new HubConnectionBuilder()
-             .WithUrl("https://localhost:7182/testhub")
+             .WithUrl("https://localhost:7182/realtimecasehub")
              .Build();
 
             await connection.StartAsync();
