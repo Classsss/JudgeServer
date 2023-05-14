@@ -75,8 +75,8 @@ namespace JudgeServer {
 
             // signalR을 이용해 실시간으로 클라이언트에 채점 진행 현황 전달
             await using var signalRConnection = new HubConnectionBuilder()
-                 .WithUrl("https://localhost:7182/realtimesubmithub")
-                 .Build();
+                .WithUrl(CLASSHUB_REALTIMESUBMITHUB)
+                .Build();
             await signalRConnection.StartAsync();
 
             // 총 케이스 횟수
