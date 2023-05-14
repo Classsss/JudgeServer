@@ -1,11 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Docker.DotNet;
 using Docker.DotNet.Models;
-using Newtonsoft.Json;
 using Microsoft.AspNetCore.SignalR.Client;
-using System.Threading.Tasks;
-using System;
-using System.Reflection;
 
 namespace JudgeServer {
     public class Judge {
@@ -74,21 +70,20 @@ namespace JudgeServer {
             DockerClient? submitDockerClient = submitDockerTuple.Item1;
             Dictionary<string, string>? submitVolumeMapping = submitDockerTuple.Item2;
 
-            // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
-            double avgExecutionTime = 0;
-            long avgMemoryUsage = 0;
-
-            // 케이스 횟수
-            int totalCaseCount = inputCases.Count();
-            int caseCount = 0;
-
             // signalR을 이용해 실시간으로 클라이언트에 채점 진행 현황 전달
             await using var signalRConnection = new HubConnectionBuilder()
                  .WithUrl("https://localhost:7182/realtimesubmithub")
                  .Build();
             await signalRConnection.StartAsync();
 
-            do {
+            // 총 케이스 횟수
+            int totalCaseCount = inputCases.Count();
+
+            // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
+            double avgExecutionTime = 0;
+            long avgMemoryUsage = 0;
+
+            for (int caseCount = 0; caseCount < totalCaseCount; caseCount++) {
                 // 클라이언트에게 채점 진행 현황과 SubmitId 전달
                 double percent = Math.Truncate((caseCount + 1) / (float)request.InputCases.Count * 100);
                 if (percent == 100) { percent = 99; }
@@ -139,9 +134,7 @@ namespace JudgeServer {
                 // 테스트 케이스에서 사용하는 파일 초기화
                 InitFile(in correctInputFilePath, in correctResultFilePath);
                 InitFile(in submitInputFilePath, in submitResultFilePath);
-
-                caseCount++;
-            } while (caseCount < totalCaseCount);
+            }
 
             // 채점 폴더 삭제
             DeleteSubmitFolder(in correctFolderPath);
@@ -581,12 +574,12 @@ namespace JudgeServer {
         /// <summary>
         /// 채점 결과에 맞게 JudgeResult 객체의 데이터를 채워 반환
         /// </summary>
-        /// <param name="caseCount">테스트 케이스의 개수</param>
+        /// <param name="totalCaseCount">테스트 케이스의 총 개수</param>
         /// <param name="result">채점 결과가 저장되는</param>
         /// <param name="avgExecutionTime">테스트 케이스 평균 실행 시간</param>
         /// <param name="avgMemoryUsage">테스트 케이스 평균 메모리 사용량</param>
         /// <returns>채점 결과에 맞게 데이터가 채워진 JudgeResult 객체</returns>
-        private static JudgeResult GetJudgeResult(in int caseCount, ref JudgeResult result, ref double avgExecutionTime, ref long avgMemoryUsage) {
+        private static JudgeResult GetJudgeResult(in int totalCaseCount, ref JudgeResult result, ref double avgExecutionTime, ref long avgMemoryUsage) {
             // 테스트 케이스를 통과하지 못함
             if (result.Result != JudgeResult.JResult.Accepted) {
                 return result;
@@ -595,8 +588,8 @@ namespace JudgeServer {
             // 모든 테스트 케이스를 통과
 
             // 평균 실행 시간, 메모리 사용량 계산
-            avgExecutionTime /= caseCount;
-            avgMemoryUsage /= caseCount;
+            avgExecutionTime /= totalCaseCount;
+            avgMemoryUsage /= totalCaseCount;
 
             // 실행 시간, 메모리 사용량 데이터 저장
             result.ExecutionTime = avgExecutionTime;
