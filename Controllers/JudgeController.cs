@@ -13,6 +13,8 @@ namespace JudgeServer.Controllers {
             // 코드를 채점한 결과를 받는다.
             JudgeResult result = await Judge.JudgeCodeAsync(request);
 
+            Console.WriteLine("채점 종료\n");
+
             return Ok(result);
         }
     }
