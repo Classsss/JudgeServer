@@ -74,21 +74,20 @@ namespace JudgeServer {
             DockerClient? submitDockerClient = submitDockerTuple.Item1;
             Dictionary<string, string>? submitVolumeMapping = submitDockerTuple.Item2;
 
-            // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
-            double avgExecutionTime = 0;
-            long avgMemoryUsage = 0;
-
-            // 케이스 횟수
-            int totalCaseCount = inputCases.Count();
-            int caseCount = 0;
-
             // signalR을 이용해 실시간으로 클라이언트에 채점 진행 현황 전달
             await using var signalRConnection = new HubConnectionBuilder()
                  .WithUrl("https://localhost:7182/realtimesubmithub")
                  .Build();
             await signalRConnection.StartAsync();
 
-            do {
+            // 총 케이스 횟수
+            int totalCaseCount = inputCases.Count();
+
+            // 테스트 케이스들의 평균 실행 시간과 메모리 사용량
+            double avgExecutionTime = 0;
+            long avgMemoryUsage = 0;
+
+            for (int caseCount = 0; caseCount < totalCaseCount; caseCount++) {
                 // 클라이언트에게 채점 진행 현황과 SubmitId 전달
                 double percent = Math.Truncate((caseCount + 1) / (float)request.InputCases.Count * 100);
                 if (percent == 100) { percent = 99; }
@@ -139,9 +138,7 @@ namespace JudgeServer {
                 // 테스트 케이스에서 사용하는 파일 초기화
                 InitFile(in correctInputFilePath, in correctResultFilePath);
                 InitFile(in submitInputFilePath, in submitResultFilePath);
-
-                caseCount++;
-            } while (caseCount < totalCaseCount);
+            }
 
             // 채점 폴더 삭제
             DeleteSubmitFolder(in correctFolderPath);
