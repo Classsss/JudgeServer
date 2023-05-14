@@ -3,6 +3,11 @@ namespace JudgeServer {
         public static void Main(string[] args) {
             var builder = WebApplication.CreateBuilder(args);
 
+            // HTTP를 이용해 채점 서버의 5000번 포트로 모든 연결을 가능하도록 설정
+            builder.WebHost.ConfigureKestrel(serverOptions => {
+                serverOptions.ListenAnyIP(5000);
+            });
+
             // Add services to the container.
 
             builder.Services.AddControllers();
@@ -21,7 +26,6 @@ namespace JudgeServer {
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 

@@ -11,6 +11,9 @@ namespace JudgeServer {
         // 도커 이미지 이름
         private const string IMAGE_NAME = "leehayoon/judge";
 
+        // signalR을 보낼 CLASS HUB의 주소
+        private const string CLASSHUB_REALTIMESUBMITHUB = "https://classhub.azurewebsites.net/realtimesubmithub";
+        
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
         /// </summary>
@@ -72,8 +75,8 @@ namespace JudgeServer {
 
             // signalR을 이용해 실시간으로 클라이언트에 채점 진행 현황 전달
             await using var signalRConnection = new HubConnectionBuilder()
-                 .WithUrl("https://localhost:7182/realtimesubmithub")
-                 .Build();
+                .WithUrl(CLASSHUB_REALTIMESUBMITHUB)
+                .Build();
             await signalRConnection.StartAsync();
 
             // 총 케이스 횟수
