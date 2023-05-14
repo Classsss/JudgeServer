@@ -11,6 +11,9 @@ namespace JudgeServer {
         // 도커 이미지 이름
         private const string IMAGE_NAME = "leehayoon/judge";
 
+        // signalR을 보낼 CLASS HUB의 주소
+        private const string CLASSHUB_REALTIMESUBMITHUB = "https://classhub.azurewebsites.net/realtimesubmithub";
+        
         /// <summary>
         /// 채점 요청을 받은 코드를 채점함.
         /// </summary>
