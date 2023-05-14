@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-
 namespace JudgeServer.Controllers {
     [Route("[controller]")]
     [ApiController]
