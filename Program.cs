@@ -1,6 +1,10 @@
 namespace JudgeServer {
     public class Program {
         public static void Main(string[] args) {
+            // 콘솔창 빠른 편집 모드 끄기
+            ConsoleWindowSetting.DisableQuickEditMode();
+
+            // builder 설정
             var builder = WebApplication.CreateBuilder(args);
 
             // HTTP를 이용해 채점 서버의 5000번 포트로 모든 연결을 가능하도록 설정
