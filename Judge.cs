@@ -328,9 +328,6 @@ namespace JudgeServer {
             // 컨테이너 실행
             await dockerClient.Containers.StartContainerAsync(createContainerResponse.ID, new ContainerStartParameters());
 
-            // 컨테이너 실행이 끝날때까지 대기
-            await dockerClient.Containers.WaitContainerAsync(createContainerResponse.ID);
-
             // 컨테이너 종료 및 삭제
             await dockerClient.Containers.StopContainerAsync(createContainerResponse.ID, new ContainerStopParameters());
             await dockerClient.Containers.RemoveContainerAsync(createContainerResponse.ID, new ContainerRemoveParameters());
